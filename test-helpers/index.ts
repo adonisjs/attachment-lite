@@ -98,7 +98,7 @@ export async function setupApplication(
         sqlite: {
           client: 'sqlite3',
           connection: {
-            filename: '${join(fs.basePath, 'db.sqlite3')}',
+            filename: '${join(fs.basePath, 'db.sqlite3').replace(/\\/g, '/')}',
           },
         },
       }
