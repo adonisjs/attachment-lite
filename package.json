@@ -87,5 +87,9 @@
     "providers": [
       "@adonisjs/lucid-slugify"
     ]
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "latest"
   }
 }
