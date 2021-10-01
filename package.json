@@ -83,9 +83,9 @@
     "@poppinss/utils": "^3.2.1"
   },
   "adonisjs": {
-    "types": "@adonisjs/lucid-slugify",
+    "types": "@adonisjs/attachment-lite",
     "providers": [
-      "@adonisjs/lucid-slugify"
+      "@adonisjs/attachment-lite"
     ]
   },
   "publishConfig": {

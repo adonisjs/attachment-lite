@@ -23,4 +23,13 @@ export default class AttachmentLiteProvider {
       }
     })
   }
+
+  public boot() {
+    this.application.container.withBindings(
+      ['Adonis/Addons/AttachmentLite', 'Adonis/Core/Drive'],
+      (AttachmentLite, Drive) => {
+        AttachmentLite.Attachment.setDrive(Drive)
+      }
+    )
+  }
 }
