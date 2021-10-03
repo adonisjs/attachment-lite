@@ -10,6 +10,8 @@
 
 A simple, opinionated package to convert any column on your Lucid model to an attachment data type.
 
+Attachment lite allows you to store a reference of user uploaded files within the database. It does not require any additional database tables and stores the file metadata as JSON within the same column.
+
 ## How it works?
 The `attachment-lite` package is **an alternative to the media library approach**. I believe media libraries are great when creating a CMS that wants a central place to keep all the images/documents.
 
