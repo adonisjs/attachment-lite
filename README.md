@@ -253,8 +253,8 @@ await User.preComputeUrls(user)
 return user
 ```
  
-[github-actions-image]: https://github.com/adonisjs/attachment-lite/actions/workflows/test.yml
-[github-actions-url]: https://img.shields.io/github/workflow/status/adonisjs/attachment-lite/test?style=for-the-badge "github-actions"
+[github-actions-image]: https://img.shields.io/github/workflow/status/adonisjs/attachment-lite/test?style=for-the-badge
+[github-actions-url]: https://github.com/adonisjs/attachment-lite/actions/workflows/test.yml "github-actions"
 
 [npm-image]: https://img.shields.io/npm/v/@adonisjs/attachment-lite.svg?style=for-the-badge&logo=npm
 [npm-url]: https://npmjs.org/package/@adonisjs/attachment-lite "npm"
