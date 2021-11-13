@@ -1,13 +1,13 @@
 /*
- * @adonisjs/attachment-lite
+ * adonis-responsive-attachment
  *
- * (c) Harminder Virk <virk@adonisjs.com>
+ * (c) Ndianabasi Udonkang <ndianabasi@furnish.ng>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
 
-declare module '@ioc:Adonis/Addons/AttachmentLite' {
+declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
   import { ColumnOptions } from '@ioc:Adonis/Lucid/Orm'
   import { MultipartFileContract } from '@ioc:Adonis/Core/BodyParser'
   import {
@@ -17,16 +17,7 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
     DriveManagerContract,
   } from '@ioc:Adonis/Core/Drive'
 
-  /**
-   * Attachment attributes. Required in order
-   * to new up an attachment instance
-   */
-  export type AttachmentAttributes = {
-    name?: string
-    size: number
-    extname: string
-    mimeType: string
-  }
+  export type Breakpoints = { large: number; medium: number; small: number }
 
   /**
    * Options used to persist the attachment to
@@ -35,16 +26,17 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
   export type AttachmentOptions = {
     disk?: keyof DisksList
     folder?: string
-    preComputeUrl?:
+    breakpoints?: Breakpoints
+    forceFormat?: 'jpeg' | 'png' | 'webp' | 'avif' | 'tiff'
+    optimizeSize?: boolean
+    optimizeOrientation?: boolean
+    responsiveDimensions?: boolean
+    preComputeUrls?:
       | boolean
-      | ((disk: DriverContract, attachment: AttachmentContract) => Promise<string>)
+      | ((disk: DriverContract, attachment: ResponsiveAttachmentContract) => Promise<UrlRecords>)
   }
 
-  /**
-   * Attachment class represents an attachment data type
-   * for Lucid models
-   */
-  export interface AttachmentContract {
+  export interface ImageAttributes {
     /**
      * The name is available only when "isPersisted" is true.
      */
@@ -72,6 +64,32 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
     mimeType: string
 
     /**
+     * The hash string of the image
+     */
+    hash: string
+
+    /**
+     * The width of the image
+     */
+    width: number
+
+    /**
+     * The height of the image
+     */
+    height: number
+  }
+
+  /**
+   * Attachment class represents an attachment data type
+   * for Lucid models
+   */
+  export interface ResponsiveAttachmentContract {
+    /**
+     * The breakpoint objects
+     */
+    breakpoints?: Record<keyof ImageBreakpoints, ImageInfo>
+
+    /**
      * "isLocal = true" means the instance is created locally
      * using the bodyparser file object
      */
@@ -93,34 +111,34 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
     setOptions(options?: AttachmentOptions): this
 
     /**
-     * Save file to the disk. Results if noop when "this.isLocal = false"
+     * Save responsive images to the disk. Results if noop when "this.isLocal = false"
      */
     save(): Promise<void>
 
     /**
-     * Delete the file from the disk
+     * Delete the responsive images from the disk
      */
     delete(): Promise<void>
 
     /**
-     * Computes the URL for the attachment
+     * Computes the URLs for the responsive images.
      */
-    computeUrl(): Promise<void>
+    computeUrls(imageData: ImageInfo): Promise<void>
 
     /**
      * Returns the URL for the file. Same as "Drive.getUrl()"
      */
-    getUrl(): Promise<string>
+    getUrls(): Promise<UrlRecords>
 
     /**
-     * Returns the signed URL for the file. Same as "Drive.getSignedUrl()"
+     * Returns the signed URLs and `ImageAttributes` for each responsive image
      */
-    getSignedUrl(options?: ContentHeaders & { expiresIn?: string | number }): Promise<string>
+    getSignedUrls(options?: ContentHeaders & { expiresIn?: string | number }): Promise<UrlRecords>
 
     /**
      * Attachment attributes
      */
-    toJSON(): AttachmentAttributes & { url?: string }
+    toJSON(): (AttachmentAttributes & { url?: string }) | null
   }
 
   /**
@@ -128,7 +146,7 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
    */
   export type AttachmentDecorator = (
     options?: AttachmentOptions & Partial<ColumnOptions>
-  ) => <TKey extends string, TTarget extends { [K in TKey]?: AttachmentContract | null }>(
+  ) => <TKey extends string, TTarget extends { [K in TKey]?: ResponsiveAttachmentContract | null }>(
     target: TTarget,
     property: TKey
   ) => void
@@ -137,9 +155,9 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
    * Attachment class constructor
    */
   export interface AttachmentConstructorContract {
-    new (attributes: AttachmentAttributes, file?: MultipartFileContract): AttachmentContract
-    fromFile(file: MultipartFileContract): AttachmentContract
-    fromDbResponse(response: string): AttachmentContract
+    new (attributes: ImageAttributes, file?: MultipartFileContract): ResponsiveAttachmentContract
+    fromFile(file: MultipartFileContract): ResponsiveAttachmentContract
+    fromDbResponse(response: string): ResponsiveAttachmentContract
     getDrive(): DriveManagerContract
     setDrive(drive: DriveManagerContract): void
   }

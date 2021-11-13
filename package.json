@@ -1,8 +1,8 @@
 {
-  "name": "@adonisjs/attachment-lite",
-  "version": "1.0.1",
-  "description": "Turn any field on your Lucid model to an attachment data type",
-  "main": "build/providers/AttachmentLiteProvider.js",
+  "name": "adonis-responsive-attachment",
+  "version": "1.0.0",
+  "description": "Turn any field on your Lucid models to an attachment data type while automatically generating responsive formats for image files.",
+  "main": "build/providers/ResponsiveAttachmentProvider.js",
   "files": [
     "build/adonis-typings",
     "build/providers",
@@ -12,7 +12,7 @@
   "scripts": {
     "mrm": "mrm --preset=@adonisjs/mrm-preset",
     "pretest": "npm run lint",
-    "test": "node japaFile.js",
+    "test": "nyc node japaFile.js",
     "clean": "del build",
     "compile": "npm run lint && npm run clean && tsc",
     "build": "npm run compile",
@@ -22,7 +22,7 @@
     "commit": "git-cz",
     "release": "np",
     "version": "npm run build",
-    "sync-labels": "github-label-sync --labels ./node_modules/@adonisjs/mrm-preset/gh-labels.json adonisjs/attachment-lite"
+    "sync-labels": "github-label-sync --labels ./node_modules/@adonisjs/mrm-preset/gh-labels.json ndianabasi/adonis-responsive-attachment"
   },
   "keywords": [
     "adonisjs",
@@ -30,7 +30,7 @@
     "attachment",
     "attachment-lite"
   ],
-  "author": "virk,adonisjs",
+  "author": "Ndianabasi Udonkang",
   "license": "MIT",
   "devDependencies": {
     "@adonisjs/core": "^5.3.4",
@@ -38,7 +38,9 @@
     "@adonisjs/mrm-preset": "^4.1.2",
     "@adonisjs/require-ts": "^2.0.8",
     "@poppinss/dev-utils": "^1.1.5",
+    "@types/lodash": "^4.14.176",
     "@types/node": "^16.10.2",
+    "@types/sharp": "^0.29.3",
     "@types/supertest": "^2.0.11",
     "commitizen": "^4.2.4",
     "cz-conventional-changelog": "^3.3.0",
@@ -52,6 +54,7 @@
     "japa": "^3.1.1",
     "mrm": "^3.0.8",
     "np": "^7.5.0",
+    "nyc": "^15.1.0",
     "prettier": "^2.4.0",
     "reflect-metadata": "^0.1.13",
     "sqlite3": "^5.0.2",
@@ -80,7 +83,9 @@
   },
   "homepage": "https://github.com/adonisjs/attachment-lite#readme",
   "dependencies": {
-    "@poppinss/utils": "^3.2.1"
+    "@poppinss/utils": "^3.2.1",
+    "lodash": "^4.17.21",
+    "sharp": "^0.29.2"
   },
   "adonisjs": {
     "types": "@adonisjs/attachment-lite",

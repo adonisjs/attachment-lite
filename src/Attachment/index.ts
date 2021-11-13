@@ -1,7 +1,7 @@
 /*
- * @adonisjs/attachment-lite
+ * adonis-responsive-attachment
  *
- * (c) Harminder Virk <virk@adonisjs.com>
+ * (c) Ndianabasi Udonkang <ndianabasi@furnish.ng>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -10,23 +10,34 @@
 /// <reference path="../../adonis-typings/index.ts" />
 
 import { Exception } from '@poppinss/utils'
-import { cuid } from '@poppinss/utils/build/helpers'
 import type { MultipartFileContract } from '@ioc:Adonis/Core/BodyParser'
 import type { DriveManagerContract, ContentHeaders } from '@ioc:Adonis/Core/Drive'
 import type {
   AttachmentOptions,
-  AttachmentContract,
+  ResponsiveAttachmentContract,
   AttachmentAttributes,
   AttachmentConstructorContract,
-} from '@ioc:Adonis/Addons/AttachmentLite'
+  ImageInfo,
+  UrlRecords,
+  NameRecords,
+  ImageBreakpoints,
+} from '@ioc:Adonis/Addons/ResponsiveAttachment'
+import {
+  enhanceFile,
+  generateBreakpointImages,
+  generateName,
+  generateThumbnail,
+  getDimensions,
+} from '../Helpers/ImageManipulationHelper'
+import _ from 'lodash'
 
-const REQUIRED_ATTRIBUTES = ['name', 'size', 'extname', 'mimeType']
+const REQUIRED_ATTRIBUTES = ['name', 'size', 'extname', 'mimeType', 'width', 'height', 'hash']
 
 /**
  * Attachment class represents an attachment data type
  * for Lucid models
  */
-export class Attachment implements AttachmentContract {
+export class Attachment implements ResponsiveAttachmentContract {
   private static drive: DriveManagerContract
 
   /**
@@ -77,7 +88,7 @@ export class Attachment implements AttachmentContract {
     const attachment = new Attachment(attributes)
 
     /**
-     * Files fetched from DB are always persisted
+     * Images fetched from DB are always persisted
      */
     attachment.isPersisted = true
     return attachment
@@ -89,30 +100,65 @@ export class Attachment implements AttachmentContract {
   private options?: AttachmentOptions
 
   /**
-   * The name is available only when "isPersisted" is true.
+   * The generated name of the original file.
+   * Available only when "isPersisted" is true.
    */
   public name: string
 
   /**
-   * The url is available only when "isPersisted" is true.
+   * The generated names of the original and breakpoint files.
+   * Available only when "isPersisted" is true.
    */
-  public url: string
+  public names: NameRecords
 
   /**
-   * The file size in bytes
+   * The urls of the original and breakpoint files.
+   * Available only when "isPersisted" is true.
+   */
+  public urls: UrlRecords
+
+  /**
+   * The container object for the attributes of the
+   * original and breakpoint files
+   */
+  public responsiveImages: any
+
+  /**
+   * The image size of the original file in bytes
    */
   public size = this.attributes.size
 
   /**
-   * The file extname. Inferred from the bodyparser file extname
+   * The image extname. Inferred from the bodyparser file extname
    * property
    */
   public extname = this.attributes.extname
 
   /**
-   * The file mimetype.
+   * The image mimetype.
    */
   public mimeType = this.attributes.mimeType
+
+  /**
+   * The image hash.
+   */
+  public hash = this.attributes.hash
+
+  /**
+   * The image width.
+   */
+  public width = this.attributes.width
+
+  /**
+   * The image height.
+   */
+  public height = this.attributes.height
+
+  /**
+   * The absolute path of the original uploaded file
+   * Available after initial move operation in the decorator
+   */
+  public path = this.attributes.path
 
   /**
    * "isLocal = true" means the instance is created locally
@@ -121,12 +167,12 @@ export class Attachment implements AttachmentContract {
   public isLocal = !!this.file
 
   /**
-   * Find if the file has been persisted or not.
+   * Find if the image has been persisted or not.
    */
   public isPersisted = false
 
   /**
-   * Find if the file has been deleted or not
+   * Find if the image has been deleted or not
    */
   public isDeleted: boolean
 
@@ -134,19 +180,6 @@ export class Attachment implements AttachmentContract {
     if (this.attributes.name) {
       this.name = this.attributes.name
     }
-  }
-
-  /**
-   * Generates the name for the attachment and prefixes
-   * the folder (if defined)
-   */
-  private generateName(): string {
-    if (this.name) {
-      return this.name
-    }
-
-    const folder = this.options?.folder
-    return `${folder ? `${folder}/` : ''}${cuid()}.${this.extname}`
   }
 
   /**
@@ -167,11 +200,22 @@ export class Attachment implements AttachmentContract {
   }
 
   /**
-   * Save file to the disk. Results if noop when "this.isLocal = false"
+   * Save image to the disk. Results in noop when "this.isLocal = false"
    */
   public async save() {
     /**
-     * Do not persist already persisted file or if the
+     * Read the original temporary file from disk and optimise the file while
+     * return the enhanced buffer and information of the enhanced buffer
+     */
+    const enhancedImageData = await enhanceFile(
+      this.getDisk,
+      this.path!,
+      this.attributes,
+      this.options
+    )
+
+    /**
+     * Do not persist already persisted image or if the
      * instance is not local
      */
     if (!this.isLocal || this.isPersisted) {
@@ -179,30 +223,108 @@ export class Attachment implements AttachmentContract {
     }
 
     /**
-     * Assign name to the file
+     * Generate the name of the original image
      */
-    this.name = this.generateName()
+    this.name = generateName({
+      extname: enhancedImageData.extname,
+      hash: enhancedImageData.hash,
+      options: this.options,
+      prefix: 'original',
+    })
 
     /**
-     * Write to the disk
+     * Add name of original image to `this.names` record
      */
-    await this.file!.moveToDisk('./', { name: this.name }, this.options?.disk)
+    this.names['original'] = this.name
 
     /**
-     * File has been persisted
+     * Inject the name into the `ImageInfo`
+     */
+    enhancedImageData.name = this.name
+
+    /**
+     * Write the optimised original image to the disk
+     */
+    await this.getDisk().put(enhancedImageData.name, enhancedImageData.buffer!)
+    //await this.file!.moveToDisk('./', { name: this.name }, this.options?.disk)
+
+    /**
+     * Generate image thumbnail data
+     */
+    const thumbnailImageData = await generateThumbnail(enhancedImageData, this.options!)
+    if (thumbnailImageData) {
+      /**
+       * Write the thumbnail image to the disk
+       */
+      await this.getDisk().put(thumbnailImageData.name!, thumbnailImageData.buffer!)
+      /**
+       * Add thumbnail name to `this.names` record
+       */
+      this.names['thumbnail'] = thumbnailImageData.name!
+      /**
+       * Delete buffer from `thumbnailImageData`
+       */
+      delete thumbnailImageData.buffer
+
+      _.set(enhancedImageData, 'breakpoints.thumbnail', thumbnailImageData)
+    }
+
+    /**
+     * Generate breakpoint image data
+     */
+    const breakpointFormats = await generateBreakpointImages(enhancedImageData, this.options!)
+    if (breakpointFormats && Array.isArray(breakpointFormats) && breakpointFormats.length > 0) {
+      for (const format of breakpointFormats) {
+        if (!format) continue
+
+        const { key, file: breakpointImageData } = format
+
+        /**
+         * Write the breakpoint image to the disk
+         */
+        await this.getDisk().put(breakpointImageData.name!, breakpointImageData.buffer!)
+        /**
+         * Add breakpoint image name to `this.names` record
+         */
+        this.names[key] = thumbnailImageData?.name!
+
+        /**
+         * Delete buffer from `breakpointImageData`
+         */
+        delete breakpointImageData.buffer
+
+        _.set(enhancedImageData, ['breakpoints', key], breakpointImageData)
+      }
+    }
+
+    const { width, height } = await getDimensions(enhancedImageData.buffer!)
+
+    delete enhancedImageData.buffer
+
+    _.assign(enhancedImageData, {
+      width,
+      height,
+    })
+
+    this.responsiveImages = enhancedImageData
+
+    /**
+     * Images has been persisted
      */
     this.isPersisted = true
 
     /**
      * Compute the URL
      */
-    await this.computeUrl()
+    await this.computeUrls(enhancedImageData)
   }
 
   /**
-   * Delete the file from the disk
+   * Delete the image from the disk
    */
   public async delete() {
+    //Todo: This needs to be an iteration
+
     if (!this.isPersisted) {
       return
     }
@@ -213,11 +335,11 @@ export class Attachment implements AttachmentContract {
   }
 
   /**
-   * Computes the URL for the attachment
+   * Computes the URLs for the breakpoint images
    */
-  public async computeUrl() {
+  public async computeUrls(imageData: ImageInfo) {
     /**
-     * Cannot compute url for a non persisted file
+     * Cannot compute url for a non persisted image
      */
     if (!this.isPersisted) {
       return
@@ -226,7 +348,7 @@ export class Attachment implements AttachmentContract {
     /**
      * Do not compute url unless preComputeUrl is set to true
      */
-    if (!this.options?.preComputeUrl) {
+    if (!this.options?.preComputeUrls) {
       return
     }
 
@@ -235,46 +357,83 @@ export class Attachment implements AttachmentContract {
     /**
      * Generate url using the user defined preComputeUrl method
      */
-    if (typeof this.options.preComputeUrl === 'function') {
-      this.url = await this.options.preComputeUrl(disk, this)
+    if (typeof this.options.preComputeUrls === 'function') {
+      this.urls = await this.options.preComputeUrls(disk, this)
       return
     }
 
     /**
      * Self compute the URL if "preComputeUrl" is set to true
      */
-    const fileVisibility = await disk.getVisibility(this.name)
-    if (fileVisibility === 'private') {
-      this.url = await disk.getSignedUrl(this.name)
-    } else {
-      this.url = await disk.getUrl(this.name)
+    for (const key in imageData) {
+      if (['name', 'breakpoints'].includes(key) === false) continue
+
+      const value = imageData[key]
+      if (key === 'name') {
+        const imageVisibility = await disk.getVisibility(value)
+        if (imageVisibility === 'private') {
+          this.urls['original'] = await disk.getSignedUrl(value)
+        } else {
+          this.urls['original'] = await disk.getUrl(value)
+        }
+      } else if (key === 'breakpoints') {
+        for (const breakpoint in value) {
+          if (Object.prototype.hasOwnProperty.call(value, breakpoint)) {
+            const breakpointImageData: ImageInfo = value?.[breakpoint]
+            if (breakpointImageData) {
+              const imageVisibility = await disk.getVisibility(breakpointImageData.name!)
+              if (imageVisibility === 'private') {
+                this.urls[breakpoint] = await disk.getSignedUrl(breakpointImageData.name!)
+              } else {
+                this.urls[breakpoint] = await disk.getUrl(breakpointImageData.name!)
+              }
+            }
+          }
+        }
+      }
     }
   }
 
   /**
-   * Returns the URL for the file. Same as "Drive.getUrl()"
+   * Returns the URLs for the breakpoint images.
    */
-  public getUrl() {
-    return this.getDisk().getUrl(this.name)
+  public async getUrls() {
+    const urls = {} as UrlRecords
+    for (const key in this.names) {
+      if (Object.prototype.hasOwnProperty.call(this.names, key)) {
+        const name = this.names[key]
+        urls[key] = await this.getDisk().getUrl(name)
+      }
+    }
+    return urls
   }
 
   /**
-   * Returns the signed URL for the file. Same as "Drive.getSignedUrl()"
+   * Returns the signed URLs for the image
    */
-  public getSignedUrl(options?: ContentHeaders & { expiresIn?: string | number }) {
-    return this.getDisk().getSignedUrl(this.name, options)
+  public async getSignedUrls(options?: ContentHeaders & { expiresIn?: string | number }) {
+    const urls = {} as UrlRecords
+    for (const key in this.names) {
+      if (Object.prototype.hasOwnProperty.call(this.names, key)) {
+        const name = this.names[key]
+        urls[key] = await this.getDisk().getSignedUrl(name, options)
+      }
+    }
+    return urls
   }
 
   /**
    * Serialize attachment instance to JSON
    */
-  public toJSON(): AttachmentAttributes & { url?: string } {
-    return {
-      ...(this.url ? { url: this.url } : {}),
-      name: this.name,
-      extname: this.extname,
-      size: this.size,
-      mimeType: this.mimeType,
-    }
+  public toJSON() {
+    if (this.responsiveImages) {
+      this.responsiveImages.url = this.urls.original
+      for (const key in this.responsiveImages.breakpoints) {
+        if (Object.prototype.hasOwnProperty.call(this.responsiveImages.breakpoints, key)) {
+          this.responsiveImages['breakpoints'][key] = this.urls[key]
+        }
+      }
+      return this.responsiveImages
+    } else return null
   }
 }

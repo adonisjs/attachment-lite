@@ -1,16 +1,16 @@
 /*
- * @adonisjs/attachment-lite
+ * adonis-responsive-attachment
  *
- * (c) Harminder Virk <virk@adonisjs.com>
+ * (c) Ndianabasi Udonkang <ndianabasi@furnish.ng>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
 
 declare module '@ioc:Adonis/Core/Application' {
-  import AttachmentLite from '@ioc:Adonis/Addons/AttachmentLite'
+  import AttachmentLite from '@ioc:Adonis/Addons/ResponsiveAttachment'
 
   interface ContainerBindings {
-    'Adonis/Addons/AttachmentLite': typeof AttachmentLite
+    'Adonis/Addons/ResponsiveAttachment': typeof AttachmentLite
   }
 }

@@ -1,7 +1,7 @@
 /*
- * @adonisjs/attachment-lite
+ * @ndianabasi/adonis-responsive-attachment
  *
- * (c) Harminder Virk <virk@adonisjs.com>
+ * (c) Ndianabasi Udonkang <ndianabasi.udonkang@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -26,7 +26,7 @@ export async function setupApplication(
   await fs.add(
     'config/app.ts',
     `
-    export const appKey = 'averylong32charsrandomsecretkey',
+    export const appKey = 'zgkDRQ21_1uznZp33C4sIGj1XUuIeIJd',
     export const http = {
       cookie: {},
       trustProxy: () => true,

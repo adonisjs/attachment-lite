@@ -1,7 +1,7 @@
 /*
- * @adonisjs/attachment-lite
+ * adonis-responsive-attachment
  *
- * (c) Harminder Virk <virk@adonisjs.com>
+ * (c) Ndianabasi Udonkang <ndianabasi@furnish.ng>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -12,11 +12,37 @@
 import type { LucidModel, LucidRow } from '@ioc:Adonis/Lucid/Orm'
 import type {
   AttachmentOptions,
-  AttachmentContract,
+  ResponsiveAttachmentContract,
   AttachmentDecorator,
-} from '@ioc:Adonis/Addons/AttachmentLite'
+  ImageInfo,
+} from '@ioc:Adonis/Addons/ResponsiveAttachment'
+import type { MultipartFileContract } from '@ioc:Adonis/Core/BodyParser'
 
 import { Attachment } from './index'
+
+import merge from 'lodash/merge'
+
+/**
+ * Default breakpoint options
+ */
+const DEFAULT_BREAKPOINTS = {
+  large: 1000,
+  medium: 750,
+  small: 500,
+}
+
+const getImageData = function (file: MultipartFileContract): ImageInfo {
+  // Store the file locally first and add the path to the ImageInfo
+  // This will be removed after the operation is completed
+  file.moveToDisk('image_upload_tmp')
+
+  return {
+    extname: file.extname ?? '',
+    mimeType: `${file.type}/${file.subtype}`,
+    size: file.size,
+    path: file.filePath,
+  }
+}
 
 /**
  * Persist attachment for a given attachment property
@@ -26,8 +52,17 @@ async function persistAttachment(
   property: string,
   options?: AttachmentOptions
 ) {
-  const existingFile = modelInstance.$original[property] as AttachmentContract
-  const newFile = modelInstance[property] as AttachmentContract
+  const existingFile = modelInstance.$original[property] as Attachment
+  const uploadedFile = modelInstance[property] as MultipartFileContract
+
+  const { extname, mimeType, size, path } = getImageData(uploadedFile)
+
+  const newFile = new Attachment({
+    extname,
+    mimeType,
+    size,
+    path,
+  })
 
   /**
    * Skip when the attachment property hasn't been updated
@@ -74,7 +109,7 @@ async function persistAttachment(
  */
 async function commit(modelInstance: LucidRow) {
   await Promise.allSettled(
-    modelInstance['attachments'].detached.map((attachment: AttachmentContract) => {
+    modelInstance['attachments'].detached.map((attachment: ResponsiveAttachmentContract) => {
       return attachment.delete()
     })
   )
@@ -85,7 +120,7 @@ async function commit(modelInstance: LucidRow) {
  */
 async function rollback(modelInstance: LucidRow) {
   await Promise.allSettled(
-    modelInstance['attachments'].attached.map((attachment: AttachmentContract) => {
+    modelInstance['attachments'].attached.map((attachment: ResponsiveAttachmentContract) => {
       return attachment.delete()
     })
   )
@@ -173,7 +208,7 @@ async function afterFind(modelInstance: LucidRow) {
       (attachmentField: { property: string; options?: AttachmentOptions }) => {
         if (modelInstance[attachmentField.property]) {
           modelInstance[attachmentField.property].setOptions(attachmentField.options)
-          return modelInstance[attachmentField.property].computeUrl()
+          return modelInstance[attachmentField.property].computeUrls()
         }
       }
     )
@@ -196,10 +231,27 @@ export const attachment: AttachmentDecorator = (options) => {
     Model.boot()
 
     /**
+     * Merge the breakpoint set on the column with the default
+     * breakpoints
+     */
+    if (options?.breakpoints) {
+      options.breakpoints = merge(DEFAULT_BREAKPOINTS, options.breakpoints || {})
+    }
+
+    /**
      * Separate attachment options from the column options
      */
-    const { disk, folder, preComputeUrl, ...columnOptions } = options || {}
-
+    const {
+      disk,
+      folder,
+      preComputeUrls,
+      breakpoints,
+      forceFormat,
+      optimizeOrientation = true,
+      optimizeSize = true,
+      responsiveDimensions = true,
+      ...columnOptions
+    } = options || {}
     /**
      * Define attachments array on the model constructor
      */
@@ -209,7 +261,19 @@ export const attachment: AttachmentDecorator = (options) => {
      * Push current column (one using the @attachment decorator) to
      * the attachments array
      */
-    Model['attachments'].push({ property, options: { disk, folder, preComputeUrl } })
+    Model['attachments'].push({
+      property,
+      options: {
+        disk,
+        folder,
+        preComputeUrls,
+        breakpoints,
+        forceFormat,
+        optimizeOrientation,
+        optimizeSize,
+        responsiveDimensions,
+      },
+    })
 
     /**
      * Define the property as a column too
@@ -242,7 +306,7 @@ export const attachment: AttachmentDecorator = (options) => {
      * Do not register hooks when "preComputeUrl" is not defined
      * inside the options
      */
-    if (!options?.preComputeUrl) {
+    if (!options?.preComputeUrls) {
       return
     }
 

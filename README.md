@@ -49,7 +49,7 @@ node ace configure @adonisjs/attachment-lite
 ```
 
 ## Usage
-The first step is to import the `attachment` decorator and the `AttachmentContract` interface from the package.
+The first step is to import the `attachment` decorator and the `ResponsiveAttachmentContract` interface from the package.
 
 > Make sure NOT to use the `@column` decorator when using the `@attachment` decorator.
 
@@ -57,19 +57,19 @@ The first step is to import the `attachment` decorator and the `AttachmentContra
 import { BaseModel } from '@ioc:Adonis/Lucid/Orm'
 import {
   attachment,
-  AttachmentContract
-} from '@ioc:Adonis/Addons/AttachmentLite'
+  ResponsiveAttachmentContract
+} from '@ioc:Adonis/Addons/ResponsiveAttachment'
 
 class User extends BaseModel {
   @attachment()
-  public avatar: AttachmentContract
+  public avatar: ResponsiveAttachmentContract
 }
 ```
 
 Now you can create an attachment from the user uploaded file as follows.
 
 ```ts
-import { Attachment } from '@ioc:Adonis/Addons/AttachmentLite'
+import { Attachment } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 
 class UsersController {
   public store({ request }: HttpContextContract) {
@@ -88,7 +88,7 @@ The `Attachment.fromFile` creates an instance of the Attachment class from the u
 You can update the property with a newly uploaded user file, and the package will take care of removing the old file and storing the new one.
 
 ```ts
-import { Attachment } from '@ioc:Adonis/Addons/AttachmentLite'
+import { Attachment } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 
 class UsersController {
   public update({ request }: HttpContextContract) {
@@ -110,7 +110,7 @@ Also, make sure you update the property type on the model to be `null` as well.
 ```ts
 class User extends BaseModel {
   @attachment()
-  public avatar: AttachmentContract | null
+  public avatar: ResponsiveAttachmentContract | null
 }
 ```
 
@@ -142,7 +142,7 @@ By default, all files are written/deleted from the default disk. However, you ca
 ```ts
 class User extends BaseModel {
   @attachment({ disk: 's3' })
-  public avatar: AttachmentContract
+  public avatar: ResponsiveAttachmentContract
 }
 ```
 
@@ -153,7 +153,7 @@ You can also store files inside the subfolder by defining the `folder` property 
 ```ts
 class User extends BaseModel {
   @attachment({ folder: 'avatars' })
-  public avatar: AttachmentContract
+  public avatar: ResponsiveAttachmentContract
 }
 ```
 
@@ -188,7 +188,7 @@ Enable the `preComputeUrl` flag to pre compute the URLs after SELECT queries. Fo
 ```ts
 class User extends BaseModel {
   @attachment({ preComputeUrl: true })
-  public avatar: AttachmentContract
+  public avatar: ResponsiveAttachmentContract
 }
 ```
 

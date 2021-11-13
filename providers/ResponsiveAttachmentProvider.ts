@@ -1,7 +1,7 @@
 /*
- * @adonisjs/attachment-lite
+ * adonis-responsive-attachment
  *
- * (c) Harminder Virk <virk@adonisjs.com>
+ * (c) Ndianabasi Udonkang <ndianabasi@furnish.ng>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -9,12 +9,12 @@
 
 import { ApplicationContract } from '@ioc:Adonis/Core/Application'
 
-export default class AttachmentLiteProvider {
+export default class ResponsiveAttachmentProvider {
   constructor(protected application: ApplicationContract) {}
 
   public register() {
-    this.application.container.bind('Adonis/Addons/AttachmentLite', () => {
-      const { Attachment } = require('../src/Attachment')
+    this.application.container.bind('Adonis/Addons/ResponsiveAttachment', () => {
+      const { Attachment } = require('../src/Attachment/index')
       const { attachment } = require('../src/Attachment/decorator')
 
       return {
@@ -26,7 +26,7 @@ export default class AttachmentLiteProvider {
 
   public boot() {
     this.application.container.withBindings(
-      ['Adonis/Addons/AttachmentLite', 'Adonis/Core/Drive'],
+      ['Adonis/Addons/ResponsiveAttachment', 'Adonis/Core/Drive'],
       (AttachmentLite, Drive) => {
         AttachmentLite.Attachment.setDrive(Drive)
       }

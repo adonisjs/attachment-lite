@@ -1,7 +1,7 @@
 /*
- * @adonisjs/attachment-lite
+ * @ndianabasi/adonis-responsive-attachment
  *
- * (c) Harminder Virk <virk@adonisjs.com>
+ * (c) Ndianabasi Udonkang <ndianabasi.udonkang@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -14,7 +14,7 @@ import { join } from 'path'
 import supertest from 'supertest'
 import { createServer } from 'http'
 import { ApplicationContract } from '@ioc:Adonis/Core/Application'
-import { AttachmentContract } from '@ioc:Adonis/Addons/AttachmentLite'
+import { ResponsiveAttachmentContract } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 import { BodyParserMiddleware } from '@adonisjs/bodyparser/build/src/BodyParser'
 
 import { Attachment } from '../src/Attachment'
@@ -53,7 +53,7 @@ test.group('@attachment | insert', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -98,7 +98,7 @@ test.group('@attachment | insert', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     await User.create({ username: 'virk' })
@@ -165,7 +165,7 @@ test.group('@attachment | insert with transaction', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -214,7 +214,7 @@ test.group('@attachment | insert with transaction', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     await User.create({ username: 'virk' })
@@ -267,7 +267,7 @@ test.group('@attachment | insert with transaction', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -329,7 +329,7 @@ test.group('@attachment | update', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -377,7 +377,7 @@ test.group('@attachment | update', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -448,7 +448,7 @@ test.group('@attachment | update with transaction', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -499,7 +499,7 @@ test.group('@attachment | update with transaction', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -556,7 +556,7 @@ test.group('@attachment | update with transaction', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -628,7 +628,7 @@ test.group('@attachment | resetToNull', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -672,7 +672,7 @@ test.group('@attachment | resetToNull', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -740,7 +740,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -787,7 +787,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -841,7 +841,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -908,7 +908,7 @@ test.group('@attachment | delete', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -951,7 +951,7 @@ test.group('@attachment | delete', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     User.before('delete', () => {
@@ -1020,7 +1020,7 @@ test.group('@attachment | delete with transaction', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -1068,7 +1068,7 @@ test.group('@attachment | delete with transaction', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     User.after('delete', () => {
@@ -1141,7 +1141,7 @@ test.group('@attachment | find', (group) => {
       public username: string
 
       @attachment({ preComputeUrl: true })
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -1185,7 +1185,7 @@ test.group('@attachment | find', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -1247,7 +1247,7 @@ test.group('@attachment | fetch', (group) => {
       public username: string
 
       @attachment({ preComputeUrl: true })
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -1291,7 +1291,7 @@ test.group('@attachment | fetch', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -1353,7 +1353,7 @@ test.group('@attachment | paginate', (group) => {
       public username: string
 
       @attachment({ preComputeUrl: true })
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
@@ -1397,7 +1397,7 @@ test.group('@attachment | paginate', (group) => {
       public username: string
 
       @attachment()
-      public avatar: AttachmentContract | null
+      public avatar: ResponsiveAttachmentContract | null
     }
 
     const server = createServer((req, res) => {
