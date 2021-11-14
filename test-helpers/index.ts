@@ -102,7 +102,7 @@ export async function setupApplication(
     };
 
     const databaseConfig = {
-      connection: 'mysql',
+      connection: 'sqlite',
       connections: {
         sqlite: {
           client: 'sqlite3',

@@ -127,6 +127,12 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
   public name?: string
 
   /**
+   * The generated url of the original file.
+   * Available only when "isPersisted" is true.
+   */
+  public url?: string
+
+  /**
    * The generated names of the original and breakpoint files.
    * Available only when "isPersisted" is true.
    */
@@ -204,6 +210,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     this.height = attributes.height
     this.extname = attributes.extname
     this.mimeType = attributes.mimeType
+    this.url = attributes.url!
     this.breakpoints = attributes.breakpoints || undefined
     this.path = attributes.path || ''
     this.isLocal = !!this.path
@@ -222,6 +229,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
       height: this.height,
       extname: this.extname,
       mimeType: this.mimeType,
+      url: this.url,
       breakpoints: this.breakpoints!,
       path: this.path!,
     }
@@ -269,18 +277,18 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
    */
   public async save() {
     /**
-     * Read the original temporary file from disk and optimise the file while
-     * return the enhanced buffer and information of the enhanced buffer
-     */
-    const enhancedImageData = await this.enhanceFile()
-
-    /**
      * Do not persist already persisted image or if the
      * instance is not local
      */
     if (!this.isLocal || this.isPersisted) {
       return
     }
+
+    /**
+     * Read the original temporary file from disk and optimise the file while
+     * return the enhanced buffer and information of the enhanced buffer
+     */
+    const enhancedImageData = await this.enhanceFile()
 
     /**
      * Generate the name of the original image
@@ -291,6 +299,17 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
       options: this.options,
       prefix: 'original',
     })
+    /**
+     * Update the local attributes with the attributes
+     * of the optimised original file
+     */
+    this.size = enhancedImageData.size
+    this.hash = enhancedImageData.hash
+    this.width = enhancedImageData.width
+    this.format = enhancedImageData.format
+    this.height = enhancedImageData.height
+    this.extname = enhancedImageData.extname
+    this.mimeType = enhancedImageData.mimeType
 
     /**
      * Add name of original image to `this.names` record
@@ -305,7 +324,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     /**
      * Write the optimised original image to the disk
      */
-    await this.getDisk().put(enhancedImageData.name, enhancedImageData.buffer!)
+    await this.getDisk().put(enhancedImageData.name!, enhancedImageData.buffer!)
     //await this.file!.moveToDisk('./', { name: this.name }, this.options?.disk)
 
     /**
@@ -368,14 +387,19 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     })
 
     /**
+     * Update the local value of `breakpoints`
+     */
+    this.breakpoints = enhancedImageData.breakpoints!
+
+    /**
      * Images has been persisted
      */
     this.isPersisted = true
 
     /**
-     * Compute the URL
+     * Forcefully compute the URL
      */
-    await this.computeUrls()
+    await this.computeUrls({ forced: true })
 
     /**
      * Delete the temporary file
@@ -431,7 +455,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
      * or the `preComputeUrls` function exists
      * or the computation is forced
      */
-    if (!this.options?.preComputeUrls || !forced) {
+    if (!this.options?.preComputeUrls && !forced) {
       return
     }
 
@@ -440,7 +464,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     /**
      * Generate url using the user defined preComputeUrls method
      */
-    if (typeof this.options.preComputeUrls === 'function') {
+    if (typeof this.options?.preComputeUrls === 'function') {
       this.urls = await this.options.preComputeUrls(disk, this)
       return
     }
@@ -448,7 +472,8 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     /**
      * Iterative URL-computation logic
      */
-    const attachmentData = this.toJSON()
+    const { path, ...originalAttributes } = this.attributes
+    const attachmentData = originalAttributes
     if (attachmentData) {
       for (const key in attachmentData) {
         if (['name', 'breakpoints'].includes(key) === false) continue
@@ -465,6 +490,8 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
           }
           this.urls['url'] = url
         } else if (key === 'breakpoints') {
+          if (!this.urls.breakpoints) this.urls.breakpoints = {} as ImageBreakpoints
+
           for (const breakpoint in value) {
             if (Object.prototype.hasOwnProperty.call(value, breakpoint)) {
               const breakpointImageData: Exclude<ImageInfo, 'breakpoints'> = value?.[breakpoint]
@@ -515,12 +542,9 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
   public toJSON() {
     const { path, ...originalAttributes } = this.attributes
 
-    return _.merge(
-      {
-        ...originalAttributes,
-        breakpoints: this.breakpoints,
-      },
-      this.urls
-    )
+    return {
+      ...originalAttributes,
+      breakpoints: this.breakpoints,
+    }
   }
 }
