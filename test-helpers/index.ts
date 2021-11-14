@@ -22,7 +22,7 @@ export async function setupApplication(
   additionalProviders?: string[],
   environment: 'web' | 'repl' | 'test' = 'test'
 ) {
-  await fs.add('.env', '')
+  await fs.add('.env', ``)
   await fs.add(
     'config/app.ts',
     `
@@ -92,8 +92,17 @@ export async function setupApplication(
 
   await fs.add(
     'config/database.ts',
-    `const databaseConfig = {
-      connection: 'sqlite',
+    `
+    const MYSQL_VARIABLES = {
+      MYSQL_HOST: 'localhost',
+      MYSQL_PORT: 3306,
+      MYSQL_USER: 'adonis',
+      MYSQL_PASSWORD: 'IGj1XUuIeIJd',
+      MYSQL_DB_NAME: 'adonis-responsive-attachment',
+    };
+
+    const databaseConfig = {
+      connection: 'mysql',
       connections: {
         sqlite: {
           client: 'sqlite3',
@@ -101,7 +110,22 @@ export async function setupApplication(
             filename: '${join(fs.basePath, 'db.sqlite3').replace(/\\/g, '/')}',
           },
         },
-      }
+        mysql: {
+          client: 'mysql',
+            connection: {
+              host: MYSQL_VARIABLES.MYSQL_HOST,
+              port: MYSQL_VARIABLES.MYSQL_PORT,
+              user: MYSQL_VARIABLES.MYSQL_USER,
+              password: MYSQL_VARIABLES.MYSQL_PASSWORD,
+              database: MYSQL_VARIABLES.MYSQL_DB_NAME,
+            },
+            migrations: {
+              naturalSort: true,
+            },
+            healthCheck: false,
+            debug: false,
+          },
+        }
     }
     export default databaseConfig`
   )
@@ -121,10 +145,12 @@ export async function setupApplication(
  * Create users table
  */
 async function createUsersTable(client: QueryClientContract) {
+  await client.schema.dropTableIfExists('users')
+
   await client.schema.createTable('users', (table) => {
     table.increments('id').notNullable().primary()
     table.string('username').notNullable().unique()
-    table.string('avatar').nullable()
+    table.json('avatar').nullable()
     table.string('cover_image').nullable()
   })
 }

@@ -77,6 +77,16 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
      * The height of the image
      */
     height: number
+
+    /**
+     * The format of the image
+     */
+    format: AttachmentOptions['forceFormat']
+
+    /**
+     * The breakpoints object for the image
+     */
+    breakpoints: ImageBreakpoints | undefined
   }
 
   /**
@@ -88,6 +98,11 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
      * The breakpoint objects
      */
     breakpoints?: Record<keyof ImageBreakpoints, ImageInfo>
+
+    /**
+     * The URLs object
+     */
+    urls?: UrlRecords
 
     /**
      * "isLocal = true" means the instance is created locally
@@ -113,7 +128,7 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
     /**
      * Save responsive images to the disk. Results if noop when "this.isLocal = false"
      */
-    save(): Promise<void>
+    save(): Promise<any>
 
     /**
      * Delete the responsive images from the disk
@@ -144,7 +159,7 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
   /**
    * File attachment decorator
    */
-  export type AttachmentDecorator = (
+  export type ResponsiveAttachmentDecorator = (
     options?: AttachmentOptions & Partial<ColumnOptions>
   ) => <TKey extends string, TTarget extends { [K in TKey]?: ResponsiveAttachmentContract | null }>(
     target: TTarget,
@@ -162,6 +177,6 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
     setDrive(drive: DriveManagerContract): void
   }
 
-  export const attachment: AttachmentDecorator
-  export const Attachment: AttachmentConstructorContract
+  export const responsiveAttachment: ResponsiveAttachmentDecorator
+  export const ResponsiveAttachment: AttachmentConstructorContract
 }

@@ -34,7 +34,7 @@
   "license": "MIT",
   "devDependencies": {
     "@adonisjs/core": "^5.3.4",
-    "@adonisjs/lucid": "^16.2.1",
+    "@adonisjs/lucid": "^16.3.2",
     "@adonisjs/mrm-preset": "^4.1.2",
     "@adonisjs/require-ts": "^2.0.8",
     "@poppinss/dev-utils": "^1.1.5",
@@ -85,6 +85,7 @@
   "dependencies": {
     "@poppinss/utils": "^3.2.1",
     "lodash": "^4.17.21",
+    "mysql": "^2.18.1",
     "sharp": "^0.29.2"
   },
   "adonisjs": {

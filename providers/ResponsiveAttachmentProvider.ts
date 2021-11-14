@@ -14,12 +14,12 @@ export default class ResponsiveAttachmentProvider {
 
   public register() {
     this.application.container.bind('Adonis/Addons/ResponsiveAttachment', () => {
-      const { Attachment } = require('../src/Attachment/index')
-      const { attachment } = require('../src/Attachment/decorator')
+      const { ResponsiveAttachment } = require('../src/Attachment')
+      const { responsiveAttachment } = require('../src/Attachment/decorator')
 
       return {
-        Attachment: Attachment,
-        attachment: attachment,
+        ResponsiveAttachment: ResponsiveAttachment,
+        responsiveAttachment: responsiveAttachment,
       }
     })
   }
@@ -27,8 +27,8 @@ export default class ResponsiveAttachmentProvider {
   public boot() {
     this.application.container.withBindings(
       ['Adonis/Addons/ResponsiveAttachment', 'Adonis/Core/Drive'],
-      (AttachmentLite, Drive) => {
-        AttachmentLite.Attachment.setDrive(Drive)
+      (ResponsiveAttachmentAddon, Drive) => {
+        ResponsiveAttachmentAddon.ResponsiveAttachment.setDrive(Drive)
       }
     )
   }

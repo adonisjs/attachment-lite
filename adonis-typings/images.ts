@@ -49,7 +49,7 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
       width: number
       height: number
       size: number
-      format: string
+      format: AttachmentOptions['forceFormat']
       mimeType: string
       extname: string
     }

@@ -17,8 +17,8 @@ import { ApplicationContract } from '@ioc:Adonis/Core/Application'
 import { ResponsiveAttachmentContract } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 import { BodyParserMiddleware } from '@adonisjs/bodyparser/build/src/BodyParser'
 
-import { Attachment } from '../src/Attachment'
-import { attachment } from '../src/Attachment/decorator'
+import { ResponsiveAttachment } from '../src/Attachment'
+import { responsiveAttachment } from '../src/Attachment/decorator'
 import { setup, cleanup, setupApplication } from '../test-helpers'
 
 let app: ApplicationContract
@@ -29,18 +29,18 @@ test.group('@attachment | insert', (group) => {
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
-    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
   group.afterEach(async () => {
-    await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
+    //await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
   })
 
   group.after(async () => {
-    await cleanup(app)
+    //await cleanup(app)
   })
 
-  test('save attachment to the db and on disk', async (assert) => {
+  test.only('save attachment to the db and on disk', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -52,7 +52,7 @@ test.group('@attachment | insert', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -63,8 +63,8 @@ test.group('@attachment | insert', (group) => {
         const file = ctx.request.file('avatar')!
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'Ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
 
         ctx.response.send(user)
@@ -77,9 +77,10 @@ test.group('@attachment | insert', (group) => {
       .attach('avatar', join(__dirname, '../cat.jpeg'))
 
     const users = await User.all()
+    console.log('from spec: ', users[0].avatar)
 
     assert.lengthOf(users, 1)
-    assert.instanceOf(users[0].avatar, Attachment)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
@@ -97,11 +98,11 @@ test.group('@attachment | insert', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
-    await User.create({ username: 'virk' })
+    await User.create({ username: 'ndianabasi' })
 
     const server = createServer((req, res) => {
       const ctx = HttpContext.create('/', {}, req, res)
@@ -110,8 +111,8 @@ test.group('@attachment | insert', (group) => {
         const file = ctx.request.file('avatar')!
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
 
         try {
           await user.save()
@@ -140,7 +141,7 @@ test.group('@attachment | insert with transaction', (group) => {
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
-    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
   group.afterEach(async () => {
@@ -164,7 +165,7 @@ test.group('@attachment | insert with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -176,8 +177,8 @@ test.group('@attachment | insert with transaction', (group) => {
         const trx = await Db.transaction()
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.useTransaction(trx).save()
 
         await trx.commit()
@@ -194,7 +195,7 @@ test.group('@attachment | insert with transaction', (group) => {
     const users = await User.all()
 
     assert.lengthOf(users, 1)
-    assert.instanceOf(users[0].avatar, Attachment)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
@@ -213,11 +214,11 @@ test.group('@attachment | insert with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
-    await User.create({ username: 'virk' })
+    await User.create({ username: 'ndianabasi' })
 
     const server = createServer((req, res) => {
       const ctx = HttpContext.create('/', {}, req, res)
@@ -227,8 +228,8 @@ test.group('@attachment | insert with transaction', (group) => {
         const trx = await Db.transaction()
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
 
         try {
           await user.useTransaction(trx).save()
@@ -266,7 +267,7 @@ test.group('@attachment | insert with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -278,8 +279,8 @@ test.group('@attachment | insert with transaction', (group) => {
         const trx = await Db.transaction()
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.useTransaction(trx).save()
         await trx.rollback()
 
@@ -305,7 +306,7 @@ test.group('@attachment | update', (group) => {
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
-    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
   group.afterEach(async () => {
@@ -328,7 +329,7 @@ test.group('@attachment | update', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -338,8 +339,8 @@ test.group('@attachment | update', (group) => {
       app.container.make(BodyParserMiddleware).handle(ctx, async () => {
         const file = ctx.request.file('avatar')!
 
-        const user = await User.firstOrNew({ username: 'virk' }, {})
-        user.avatar = Attachment.fromFile(file)
+        const user = await User.firstOrNew({ username: 'ndianabasi' }, {})
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
 
         ctx.response.send(user)
@@ -358,7 +359,7 @@ test.group('@attachment | update', (group) => {
     const users = await User.all()
 
     assert.lengthOf(users, 1)
-    assert.instanceOf(users[0].avatar, Attachment)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), secondResponse.avatar)
     assert.isFalse(await Drive.exists(firstResponse.avatar.name))
     assert.isTrue(await Drive.exists(secondResponse.avatar.name))
@@ -376,7 +377,7 @@ test.group('@attachment | update', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -387,8 +388,8 @@ test.group('@attachment | update', (group) => {
         const file = ctx.request.file('avatar')!
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
 
         try {
           await user.save()
@@ -410,7 +411,7 @@ test.group('@attachment | update', (group) => {
     const users = await User.all()
 
     assert.lengthOf(users, 1)
-    assert.instanceOf(users[0].avatar, Attachment)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
     assert.isTrue(await Drive.exists(firstResponse.avatar.name))
     assert.isFalse(await Drive.exists(secondResponse.avatar.name))
@@ -423,7 +424,7 @@ test.group('@attachment | update with transaction', (group) => {
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
-    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
   group.afterEach(async () => {
@@ -447,7 +448,7 @@ test.group('@attachment | update with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -458,8 +459,8 @@ test.group('@attachment | update with transaction', (group) => {
         const file = ctx.request.file('avatar')!
         const trx = await Db.transaction()
 
-        const user = await User.firstOrNew({ username: 'virk' }, {}, { client: trx })
-        user.avatar = Attachment.fromFile(file)
+        const user = await User.firstOrNew({ username: 'ndianabasi' }, {}, { client: trx })
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
         await trx.commit()
 
@@ -479,7 +480,7 @@ test.group('@attachment | update with transaction', (group) => {
     const users = await User.all()
 
     assert.lengthOf(users, 1)
-    assert.instanceOf(users[0].avatar, Attachment)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), secondResponse.avatar)
     assert.isFalse(await Drive.exists(firstResponse.avatar.name))
     assert.isTrue(await Drive.exists(secondResponse.avatar.name))
@@ -498,7 +499,7 @@ test.group('@attachment | update with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -510,8 +511,8 @@ test.group('@attachment | update with transaction', (group) => {
         const trx = await Db.transaction()
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
 
         try {
           await user.useTransaction(trx).save()
@@ -536,7 +537,7 @@ test.group('@attachment | update with transaction', (group) => {
     const users = await User.all()
 
     assert.lengthOf(users, 1)
-    assert.instanceOf(users[0].avatar, Attachment)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
     assert.isTrue(await Drive.exists(firstResponse.avatar.name))
     assert.isFalse(await Drive.exists(secondResponse.avatar.name))
@@ -555,7 +556,7 @@ test.group('@attachment | update with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -566,11 +567,11 @@ test.group('@attachment | update with transaction', (group) => {
         const file = ctx.request.file('avatar')!
         const trx = await Db.transaction()
 
-        const user = await User.firstOrNew({ username: 'virk' }, {}, { client: trx })
+        const user = await User.firstOrNew({ username: 'ndianabasi' }, {}, { client: trx })
         const isLocal = user.$isLocal
 
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.useTransaction(trx).save()
 
         isLocal ? await trx.commit() : await trx.rollback()
@@ -591,7 +592,7 @@ test.group('@attachment | update with transaction', (group) => {
     const users = await User.all()
 
     assert.lengthOf(users, 1)
-    assert.instanceOf(users[0].avatar, Attachment)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
     assert.isTrue(await Drive.exists(firstResponse.avatar.name))
     assert.isFalse(await Drive.exists(secondResponse.avatar.name))
@@ -604,7 +605,7 @@ test.group('@attachment | resetToNull', (group) => {
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
-    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
   group.afterEach(async () => {
@@ -627,7 +628,7 @@ test.group('@attachment | resetToNull', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -637,8 +638,8 @@ test.group('@attachment | resetToNull', (group) => {
       app.container.make(BodyParserMiddleware).handle(ctx, async () => {
         const file = ctx.request.file('avatar')
 
-        const user = await User.firstOrNew({ username: 'virk' }, {})
-        user.avatar = file ? Attachment.fromFile(file) : null
+        const user = await User.firstOrNew({ username: 'ndianabasi' }, {})
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
 
         ctx.response.send(user)
@@ -671,7 +672,7 @@ test.group('@attachment | resetToNull', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -682,8 +683,8 @@ test.group('@attachment | resetToNull', (group) => {
         const file = ctx.request.file('avatar')
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = file ? Attachment.fromFile(file) : null
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
 
         try {
           await user.save()
@@ -703,7 +704,7 @@ test.group('@attachment | resetToNull', (group) => {
     const users = await User.all()
 
     assert.lengthOf(users, 1)
-    assert.instanceOf(users[0].avatar, Attachment)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
     assert.isTrue(await Drive.exists(firstResponse.avatar.name))
   })
@@ -715,7 +716,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
-    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
   group.afterEach(async () => {
@@ -739,7 +740,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -750,8 +751,8 @@ test.group('@attachment | resetToNull with transaction', (group) => {
         const file = ctx.request.file('avatar')
         const trx = await Db.transaction()
 
-        const user = await User.firstOrNew({ username: 'virk' }, {}, { client: trx })
-        user.avatar = file ? Attachment.fromFile(file) : null
+        const user = await User.firstOrNew({ username: 'ndianabasi' }, {}, { client: trx })
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.useTransaction(trx).save()
         await trx.commit()
 
@@ -786,7 +787,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -798,8 +799,8 @@ test.group('@attachment | resetToNull with transaction', (group) => {
         const trx = await Db.transaction()
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = file ? Attachment.fromFile(file) : null
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
 
         try {
           await user.useTransaction(trx).save()
@@ -822,7 +823,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
     const users = await User.all()
 
     assert.lengthOf(users, 1)
-    assert.instanceOf(users[0].avatar, Attachment)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
     assert.isTrue(await Drive.exists(firstResponse.avatar.name))
   })
@@ -840,7 +841,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -851,9 +852,9 @@ test.group('@attachment | resetToNull with transaction', (group) => {
         const file = ctx.request.file('avatar')
         const trx = await Db.transaction()
 
-        const user = await User.firstOrNew({ username: 'virk' }, {}, { client: trx })
+        const user = await User.firstOrNew({ username: 'ndianabasi' }, {}, { client: trx })
         const isLocal = user.$isLocal
-        user.avatar = file ? Attachment.fromFile(file) : null
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
 
         await user.useTransaction(trx).save()
         isLocal ? await trx.commit() : await trx.rollback()
@@ -872,7 +873,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
     const users = await User.all()
 
     assert.lengthOf(users, 1)
-    assert.instanceOf(users[0].avatar, Attachment)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
     assert.isTrue(await Drive.exists(firstResponse.avatar.name))
   })
@@ -884,7 +885,7 @@ test.group('@attachment | delete', (group) => {
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
-    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
   group.afterEach(async () => {
@@ -907,7 +908,7 @@ test.group('@attachment | delete', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -917,8 +918,8 @@ test.group('@attachment | delete', (group) => {
       app.container.make(BodyParserMiddleware).handle(ctx, async () => {
         const file = ctx.request.file('avatar')
 
-        const user = await User.firstOrNew({ username: 'virk' }, {})
-        user.avatar = file ? Attachment.fromFile(file) : null
+        const user = await User.firstOrNew({ username: 'ndianabasi' }, {})
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
 
         ctx.response.send(user)
@@ -950,7 +951,7 @@ test.group('@attachment | delete', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -964,8 +965,8 @@ test.group('@attachment | delete', (group) => {
       app.container.make(BodyParserMiddleware).handle(ctx, async () => {
         const file = ctx.request.file('avatar')
 
-        const user = await User.firstOrNew({ username: 'virk' }, {})
-        user.avatar = file ? Attachment.fromFile(file) : null
+        const user = await User.firstOrNew({ username: 'ndianabasi' }, {})
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
 
         ctx.response.send(user)
@@ -995,7 +996,7 @@ test.group('@attachment | delete with transaction', (group) => {
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
-    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
   group.afterEach(async () => {
@@ -1019,7 +1020,7 @@ test.group('@attachment | delete with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -1029,8 +1030,8 @@ test.group('@attachment | delete with transaction', (group) => {
       app.container.make(BodyParserMiddleware).handle(ctx, async () => {
         const file = ctx.request.file('avatar')
 
-        const user = await User.firstOrNew({ username: 'virk' }, {})
-        user.avatar = file ? Attachment.fromFile(file) : null
+        const user = await User.firstOrNew({ username: 'ndianabasi' }, {})
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
 
         ctx.response.send(user)
@@ -1067,7 +1068,7 @@ test.group('@attachment | delete with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -1081,8 +1082,8 @@ test.group('@attachment | delete with transaction', (group) => {
       app.container.make(BodyParserMiddleware).handle(ctx, async () => {
         const file = ctx.request.file('avatar')
 
-        const user = await User.firstOrNew({ username: 'virk' }, {})
-        user.avatar = file ? Attachment.fromFile(file) : null
+        const user = await User.firstOrNew({ username: 'ndianabasi' }, {})
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
 
         ctx.response.send(user)
@@ -1117,7 +1118,7 @@ test.group('@attachment | find', (group) => {
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
-    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
   group.afterEach(async () => {
@@ -1140,7 +1141,7 @@ test.group('@attachment | find', (group) => {
       @column()
       public username: string
 
-      @attachment({ preComputeUrl: true })
+      @responsiveAttachment({ preComputeUrls: true })
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -1151,8 +1152,8 @@ test.group('@attachment | find', (group) => {
         const file = ctx.request.file('avatar')!
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
 
         ctx.response.send(user)
@@ -1165,14 +1166,14 @@ test.group('@attachment | find', (group) => {
       .attach('avatar', join(__dirname, '../cat.jpeg'))
 
     const user = await User.firstOrFail()
-    assert.instanceOf(user.avatar, Attachment)
-    assert.isDefined(user.avatar?.url)
-    assert.isDefined(body.avatar.url)
+    assert.instanceOf(user.avatar, ResponsiveAttachment)
+    assert.isDefined(user.avatar?.urls)
+    assert.isDefined(body.avatar.urls)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
   })
 
-  test('do not pre compute when preComputeUrl is not enabled', async (assert) => {
+  test('do not pre compute when preComputeUrls is not enabled', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1184,7 +1185,7 @@ test.group('@attachment | find', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -1195,8 +1196,8 @@ test.group('@attachment | find', (group) => {
         const file = ctx.request.file('avatar')!
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
 
         ctx.response.send(user)
@@ -1209,8 +1210,8 @@ test.group('@attachment | find', (group) => {
       .attach('avatar', join(__dirname, '../cat.jpeg'))
 
     const user = await User.firstOrFail()
-    assert.instanceOf(user.avatar, Attachment)
-    assert.isUndefined(user.avatar?.url)
+    assert.instanceOf(user.avatar, ResponsiveAttachment)
+    assert.isUndefined(user.avatar?.urls)
     assert.isUndefined(body.avatar.url)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
@@ -1223,7 +1224,7 @@ test.group('@attachment | fetch', (group) => {
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
-    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
   group.afterEach(async () => {
@@ -1246,7 +1247,7 @@ test.group('@attachment | fetch', (group) => {
       @column()
       public username: string
 
-      @attachment({ preComputeUrl: true })
+      @responsiveAttachment({ preComputeUrls: true })
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -1257,8 +1258,8 @@ test.group('@attachment | fetch', (group) => {
         const file = ctx.request.file('avatar')!
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
 
         ctx.response.send(user)
@@ -1271,14 +1272,14 @@ test.group('@attachment | fetch', (group) => {
       .attach('avatar', join(__dirname, '../cat.jpeg'))
 
     const users = await User.all()
-    assert.instanceOf(users[0].avatar, Attachment)
-    assert.isDefined(users[0].avatar?.url)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
+    assert.isDefined(users[0].avatar?.urls)
     assert.isDefined(body.avatar.url)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
   })
 
-  test('do not pre compute when preComputeUrl is not enabled', async (assert) => {
+  test('do not pre compute when preComputeUrls is not enabled', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1290,7 +1291,7 @@ test.group('@attachment | fetch', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -1301,8 +1302,8 @@ test.group('@attachment | fetch', (group) => {
         const file = ctx.request.file('avatar')!
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
 
         ctx.response.send(user)
@@ -1315,8 +1316,8 @@ test.group('@attachment | fetch', (group) => {
       .attach('avatar', join(__dirname, '../cat.jpeg'))
 
     const users = await User.all()
-    assert.instanceOf(users[0].avatar, Attachment)
-    assert.isUndefined(users[0].avatar?.url)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
+    assert.isUndefined(users[0].avatar?.urls)
     assert.isUndefined(body.avatar.url)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
@@ -1329,7 +1330,7 @@ test.group('@attachment | paginate', (group) => {
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
-    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
   group.afterEach(async () => {
@@ -1352,7 +1353,7 @@ test.group('@attachment | paginate', (group) => {
       @column()
       public username: string
 
-      @attachment({ preComputeUrl: true })
+      @responsiveAttachment({ preComputeUrls: true })
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -1363,8 +1364,8 @@ test.group('@attachment | paginate', (group) => {
         const file = ctx.request.file('avatar')!
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
 
         ctx.response.send(user)
@@ -1377,14 +1378,14 @@ test.group('@attachment | paginate', (group) => {
       .attach('avatar', join(__dirname, '../cat.jpeg'))
 
     const users = await User.query().paginate(1)
-    assert.instanceOf(users[0].avatar, Attachment)
-    assert.isDefined(users[0].avatar?.url)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
+    assert.isDefined(users[0].avatar?.urls)
     assert.isDefined(body.avatar.url)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
   })
 
-  test('do not pre compute when preComputeUrl is not enabled', async (assert) => {
+  test('do not pre compute when preComputeUrls is not enabled', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1396,7 +1397,7 @@ test.group('@attachment | paginate', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @responsiveAttachment()
       public avatar: ResponsiveAttachmentContract | null
     }
 
@@ -1407,8 +1408,8 @@ test.group('@attachment | paginate', (group) => {
         const file = ctx.request.file('avatar')!
 
         const user = new User()
-        user.username = 'virk'
-        user.avatar = Attachment.fromFile(file)
+        user.username = 'ndianabasi'
+        user.avatar = file ? await ResponsiveAttachment.fromFile(file) : null
         await user.save()
 
         ctx.response.send(user)
@@ -1421,8 +1422,8 @@ test.group('@attachment | paginate', (group) => {
       .attach('avatar', join(__dirname, '../cat.jpeg'))
 
     const users = await User.query().paginate(1)
-    assert.instanceOf(users[0].avatar, Attachment)
-    assert.isUndefined(users[0].avatar?.url)
+    assert.instanceOf(users[0].avatar, ResponsiveAttachment)
+    assert.isUndefined(users[0].avatar?.urls)
     assert.isUndefined(body.avatar.url)
 
     assert.isTrue(await Drive.exists(body.avatar.name))

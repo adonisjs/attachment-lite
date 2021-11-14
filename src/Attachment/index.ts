@@ -23,25 +23,36 @@ import type {
   ImageBreakpoints,
 } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 import {
-  enhanceFile,
   generateBreakpointImages,
   generateName,
   generateThumbnail,
   getDimensions,
+  optimize,
 } from '../Helpers/ImageManipulationHelper'
 import _ from 'lodash'
+import cuid from 'cuid'
 
-const REQUIRED_ATTRIBUTES = ['name', 'size', 'extname', 'mimeType', 'width', 'height', 'hash']
+const REQUIRED_ATTRIBUTES = [
+  'name',
+  'size',
+  'extname',
+  'mimeType',
+  'width',
+  'height',
+  'hash',
+  'breakpoints',
+  'format',
+]
 
 /**
  * Attachment class represents an attachment data type
  * for Lucid models
  */
-export class Attachment implements ResponsiveAttachmentContract {
+export class ResponsiveAttachment implements ResponsiveAttachmentContract {
   private static drive: DriveManagerContract
 
   /**
-   * Refrence to the drive
+   * Reference to the drive
    */
   public static getDrive() {
     return this.drive
@@ -58,14 +69,21 @@ export class Attachment implements ResponsiveAttachmentContract {
    * Create attachment instance from the bodyparser
    * file
    */
-  public static fromFile(file: MultipartFileContract) {
+  public static async fromFile(file: MultipartFileContract) {
+    // Store the file locally first and add the path to the ImageInfo
+    // This will be removed after the operation is completed
+    await file.moveToDisk('image_upload_tmp')
+
     const attributes = {
       extname: file.extname!,
       mimeType: `${file.type}/${file.subtype}`,
-      size: file.size!,
+      size: file.size,
+      path: file.filePath,
     }
 
-    return new Attachment(attributes, file)
+    const responsiveAttachment = new ResponsiveAttachment(attributes)
+
+    return responsiveAttachment
   }
 
   /**
@@ -73,6 +91,8 @@ export class Attachment implements ResponsiveAttachmentContract {
    */
   public static fromDbResponse(response: any) {
     const attributes = typeof response === 'string' ? JSON.parse(response) : response
+
+    if (!attributes) return null
 
     /**
      * Validate the db response
@@ -85,7 +105,7 @@ export class Attachment implements ResponsiveAttachmentContract {
       }
     })
 
-    const attachment = new Attachment(attributes)
+    const attachment = new ResponsiveAttachment(attributes)
 
     /**
      * Images fetched from DB are always persisted
@@ -103,19 +123,19 @@ export class Attachment implements ResponsiveAttachmentContract {
    * The generated name of the original file.
    * Available only when "isPersisted" is true.
    */
-  public name: string
+  public name?: string
 
   /**
    * The generated names of the original and breakpoint files.
    * Available only when "isPersisted" is true.
    */
-  public names: NameRecords
+  public names = {} as NameRecords
 
   /**
    * The urls of the original and breakpoint files.
    * Available only when "isPersisted" is true.
    */
-  public urls: UrlRecords
+  public urls = {} as UrlRecords
 
   /**
    * The container object for the attributes of the
@@ -126,45 +146,49 @@ export class Attachment implements ResponsiveAttachmentContract {
   /**
    * The image size of the original file in bytes
    */
-  public size = this.attributes.size
+  public size?: number | undefined
 
   /**
    * The image extname. Inferred from the bodyparser file extname
    * property
    */
-  public extname = this.attributes.extname
+  public extname?: string | undefined
 
   /**
    * The image mimetype.
    */
-  public mimeType = this.attributes.mimeType
+  public mimeType?: string | undefined
 
   /**
    * The image hash.
    */
-  public hash = this.attributes.hash
+  public hash?: string | undefined
 
   /**
    * The image width.
    */
-  public width = this.attributes.width
+  public width?: number
 
   /**
    * The image height.
    */
-  public height = this.attributes.height
+  public height?: number
 
   /**
    * The absolute path of the original uploaded file
    * Available after initial move operation in the decorator
    */
-  public path = this.attributes.path
+  public path?: string
 
   /**
-   * "isLocal = true" means the instance is created locally
-   * using the bodyparser file object
+   * The format or filetype of the image.
    */
-  public isLocal = !!this.file
+  public format: AttachmentOptions['forceFormat'] | undefined
+
+  /**
+   * The format or filetype of the image.
+   */
+  public breakpoints: ImageBreakpoints | undefined
 
   /**
    * Find if the image has been persisted or not.
@@ -176,11 +200,42 @@ export class Attachment implements ResponsiveAttachmentContract {
    */
   public isDeleted: boolean
 
-  constructor(private attributes: AttachmentAttributes, private file?: MultipartFileContract) {
-    if (this.attributes.name) {
-      this.name = this.attributes.name
+  constructor(attributes: AttachmentAttributes) {
+    this.name = attributes.name
+    this.size = attributes.size
+    this.hash = attributes.hash
+    this.width = attributes.width
+    this.format = attributes.format
+    this.height = attributes.height
+    this.extname = attributes.extname
+    this.mimeType = attributes.mimeType
+    this.breakpoints = attributes.breakpoints || undefined
+    this.path = attributes.path || ''
+    this.isLocal = !!this.path
+
+    this.names = this.urls = {} as UrlRecords
+  }
+
+  public get attributes() {
+    return {
+      name: this.name,
+      size: this.size,
+      hash: this.hash,
+      width: this.width,
+      format: this.format,
+      height: this.height,
+      extname: this.extname,
+      mimeType: this.mimeType,
+      breakpoints: this.breakpoints!,
+      path: this.path!,
     }
   }
+
+  /**
+   * "isLocal = true" means the instance is created locally
+   * using the bodyparser file object
+   */
+  public isLocal = !!this.path
 
   /**
    * Returns disk instance
@@ -199,6 +254,20 @@ export class Attachment implements ResponsiveAttachmentContract {
     return this
   }
 
+  protected async enhanceFile(): Promise<ImageInfo> {
+    // Read the image as a buffer using `Drive.get()`
+    const originalFileBuffer = await this.getDisk().get(this.path!)
+
+    // Optimise the image buffer and return the optimised buffer
+    // and the info of the image
+    const { buffer, info } = await optimize(originalFileBuffer, this.options)
+
+    // Override the `imageInfo` object with the optimised `info` object
+    // As the optimised `info` object is preferred
+    // Also append the `hash` and `buffer`
+    return _.assign({ ...this.attributes }, info, { hash: cuid(), buffer })
+  }
+
   /**
    * Save image to the disk. Results in noop when "this.isLocal = false"
    */
@@ -207,12 +276,7 @@ export class Attachment implements ResponsiveAttachmentContract {
      * Read the original temporary file from disk and optimise the file while
      * return the enhanced buffer and information of the enhanced buffer
      */
-    const enhancedImageData = await enhanceFile(
-      this.getDisk,
-      this.path!,
-      this.attributes,
-      this.options
-    )
+    const enhancedImageData = await this.enhanceFile()
 
     /**
      * Do not persist already persisted image or if the
@@ -300,6 +364,7 @@ export class Attachment implements ResponsiveAttachmentContract {
     const { width, height } = await getDimensions(enhancedImageData.buffer!)
 
     delete enhancedImageData.buffer
+    delete enhancedImageData.path
 
     _.assign(enhancedImageData, {
       width,
@@ -316,7 +381,14 @@ export class Attachment implements ResponsiveAttachmentContract {
     /**
      * Compute the URL
      */
-    await this.computeUrls(enhancedImageData)
+    await this.computeUrls()
+
+    /**
+     * Delete the temporary file
+     */
+    await this.getDisk().delete(this.path!)
+
+    return enhancedImageData
   }
 
   /**
@@ -329,7 +401,7 @@ export class Attachment implements ResponsiveAttachmentContract {
       return
     }
 
-    await this.getDisk().delete(this.name)
+    await this.getDisk().delete(this.name!)
     this.isDeleted = true
     this.isPersisted = false
   }
@@ -337,7 +409,7 @@ export class Attachment implements ResponsiveAttachmentContract {
   /**
    * Computes the URLs for the breakpoint images
    */
-  public async computeUrls(imageData: ImageInfo) {
+  public async computeUrls() {
     /**
      * Cannot compute url for a non persisted image
      */
@@ -365,17 +437,21 @@ export class Attachment implements ResponsiveAttachmentContract {
     /**
      * Self compute the URL if "preComputeUrl" is set to true
      */
-    for (const key in imageData) {
+    for (const key in this.responsiveImages) {
       if (['name', 'breakpoints'].includes(key) === false) continue
 
-      const value = imageData[key]
+      const value = this.responsiveImages[key]
+      let url: string
       if (key === 'name') {
-        const imageVisibility = await disk.getVisibility(value)
+        const name = value
+        const imageVisibility = await disk.getVisibility(name)
         if (imageVisibility === 'private') {
-          this.urls['original'] = await disk.getSignedUrl(value)
+          url = await disk.getSignedUrl(name)
         } else {
-          this.urls['original'] = await disk.getUrl(value)
+          url = await disk.getUrl(name)
         }
+        this.urls['original'] = url
+        this.responsiveImages.url = url
       } else if (key === 'breakpoints') {
         for (const breakpoint in value) {
           if (Object.prototype.hasOwnProperty.call(value, breakpoint)) {
@@ -383,9 +459,13 @@ export class Attachment implements ResponsiveAttachmentContract {
             if (breakpointImageData) {
               const imageVisibility = await disk.getVisibility(breakpointImageData.name!)
               if (imageVisibility === 'private') {
-                this.urls[breakpoint] = await disk.getSignedUrl(breakpointImageData.name!)
+                url = await disk.getSignedUrl(breakpointImageData.name!)
+                this.urls[breakpoint] = url
+                this.responsiveImages.breakpoints[breakpoint].url = url
               } else {
-                this.urls[breakpoint] = await disk.getUrl(breakpointImageData.name!)
+                url = await disk.getUrl(breakpointImageData.name!)
+                this.urls[breakpoint] = url
+                this.responsiveImages.breakpoints[breakpoint].url = url
               }
             }
           }

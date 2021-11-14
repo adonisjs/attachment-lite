@@ -13,12 +13,10 @@ import type { LucidModel, LucidRow } from '@ioc:Adonis/Lucid/Orm'
 import type {
   AttachmentOptions,
   ResponsiveAttachmentContract,
-  AttachmentDecorator,
-  ImageInfo,
+  ResponsiveAttachmentDecorator,
 } from '@ioc:Adonis/Addons/ResponsiveAttachment'
-import type { MultipartFileContract } from '@ioc:Adonis/Core/BodyParser'
 
-import { Attachment } from './index'
+import { ResponsiveAttachment } from './index'
 
 import merge from 'lodash/merge'
 
@@ -31,19 +29,6 @@ const DEFAULT_BREAKPOINTS = {
   small: 500,
 }
 
-const getImageData = function (file: MultipartFileContract): ImageInfo {
-  // Store the file locally first and add the path to the ImageInfo
-  // This will be removed after the operation is completed
-  file.moveToDisk('image_upload_tmp')
-
-  return {
-    extname: file.extname ?? '',
-    mimeType: `${file.type}/${file.subtype}`,
-    size: file.size,
-    path: file.filePath,
-  }
-}
-
 /**
  * Persist attachment for a given attachment property
  */
@@ -52,17 +37,8 @@ async function persistAttachment(
   property: string,
   options?: AttachmentOptions
 ) {
-  const existingFile = modelInstance.$original[property] as Attachment
-  const uploadedFile = modelInstance[property] as MultipartFileContract
-
-  const { extname, mimeType, size, path } = getImageData(uploadedFile)
-
-  const newFile = new Attachment({
-    extname,
-    mimeType,
-    size,
-    path,
-  })
+  const existingFile = modelInstance.$original[property] as ResponsiveAttachmentContract
+  const newFile = modelInstance[property] as ResponsiveAttachmentContract
 
   /**
    * Skip when the attachment property hasn't been updated
@@ -100,7 +76,13 @@ async function persistAttachment(
     /**
      * Also write the file to the disk right away
      */
-    await newFile.save()
+    const finalImageData = await newFile.save()
+
+    /**
+     * Use this `finalImageData` as the value to be persisted
+     * on the column for the `property`
+     */
+    modelInstance[property] = finalImageData
   }
 }
 
@@ -225,7 +207,7 @@ async function afterFetch(modelInstances: LucidRow[]) {
 /**
  * Attachment decorator
  */
-export const attachment: AttachmentDecorator = (options) => {
+export const responsiveAttachment: ResponsiveAttachmentDecorator = (options) => {
   return function (target, property) {
     const Model = target.constructor as LucidModel
     Model.boot()
@@ -236,6 +218,9 @@ export const attachment: AttachmentDecorator = (options) => {
      */
     if (options?.breakpoints) {
       options.breakpoints = merge(DEFAULT_BREAKPOINTS, options.breakpoints || {})
+    } else {
+      options = {} as AttachmentOptions
+      options.breakpoints = DEFAULT_BREAKPOINTS
     }
 
     /**
@@ -252,13 +237,14 @@ export const attachment: AttachmentDecorator = (options) => {
       responsiveDimensions = true,
       ...columnOptions
     } = options || {}
+
     /**
      * Define attachments array on the model constructor
      */
     Model.$defineProperty('attachments' as any, [], 'inherit')
 
     /**
-     * Push current column (one using the @attachment decorator) to
+     * Push current column (the one using the @attachment decorator) to
      * the attachments array
      */
     Model['attachments'].push({
@@ -280,7 +266,7 @@ export const attachment: AttachmentDecorator = (options) => {
      */
     Model.$addColumn(property, {
       ...columnOptions,
-      consume: (value) => (value ? Attachment.fromDbResponse(value) : null),
+      consume: (value) => (value ? ResponsiveAttachment.fromDbResponse(value) : null),
       prepare: (value) => (value ? JSON.stringify(value) : null),
     })
 

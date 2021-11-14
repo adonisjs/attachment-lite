@@ -7,7 +7,6 @@ import {
   BreakpointFormat,
   FileDimensions,
 } from '@ioc:Adonis/Addons/ResponsiveAttachment'
-import type { LocalDriverContract } from '@ioc:Adonis/Core/Drive'
 import { cuid } from '@poppinss/utils/build/helpers'
 import _ from 'lodash'
 
@@ -90,7 +89,7 @@ export const generateBreakpoint = async ({
       key: key as keyof ImageBreakpoints,
       file: {
         name: breakpointFileName,
-        hash: `${key}_${imageData.hash}`,
+        hash: imageData.hash,
         extname,
         mimeType: `image/${format}`,
         width: width,
@@ -158,32 +157,13 @@ export const optimize = async function (
           width: info.width,
           height: info.height,
           size: bytesToKBytes(outputBuffer.length),
-          format: info.format,
+          format: info.format as AttachmentOptions['forceFormat'],
           mimeType: `image/${info.format}`,
           extname: getImageExtension(info.format as ImageInfo['format']),
         },
       }
     })
     .catch(() => ({ buffer }))
-}
-
-export const enhanceFile = async function (
-  driveInstance: () => LocalDriverContract,
-  imagePath: string,
-  imageInfo: Partial<ImageInfo>,
-  options?: AttachmentOptions
-) {
-  // Read the image as a buffer using `Drive.get()`
-  const originalFileBuffer = await driveInstance().get(imagePath)
-
-  // Optimise the image buffer and return the optimised buffer
-  // and the info of the image
-  const { buffer, info } = await optimize(originalFileBuffer, options)
-
-  // Override the `imageInfo` object with the optimised `info` object
-  // As the optimised `info` object is preferred
-  // Also append the `hash` and `buffer`
-  return _.assign(imageInfo, info, { hash: cuid(), buffer })
 }
 
 export const generateThumbnail = async function (
@@ -220,7 +200,7 @@ export const generateThumbnail = async function (
 
       return {
         name: thumbnailFileName,
-        hash: `thumbnail_${imageData.hash}`,
+        hash: imageData.hash,
         extname,
         mimeType: `image/${format}`,
         width: thumbnailWidth,
