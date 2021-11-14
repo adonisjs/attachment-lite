@@ -69,7 +69,13 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
     height?: number
   }
 
-  export type UrlRecords = { original: string } & Record<keyof ImageBreakpoints, string>
+  export type UrlRecords = {
+    url: string
+    breakpoints: Record<keyof ImageBreakpoints, { url: string }>
+  }
 
-  export type NameRecords = UrlRecords
+  export type NameRecords = {
+    name: string
+    breakpoints: Record<keyof ImageBreakpoints, { name: string }>
+  }
 }

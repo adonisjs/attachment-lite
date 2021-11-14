@@ -137,8 +137,14 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
 
     /**
      * Computes the URLs for the responsive images.
+     * @param options
+     * @param options.forced Force the URLs to be completed whether
+     * `preComputedURLs` is true or not
      */
-    computeUrls(imageData: ImageInfo): Promise<void>
+    computeUrls(options?: {
+      forced: boolean
+      signedUrlOptions?: ContentHeaders & { expiresIn?: string | number }
+    }): Promise<void>
 
     /**
      * Returns the URL for the file. Same as "Drive.getUrl()"

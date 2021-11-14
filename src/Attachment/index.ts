@@ -21,6 +21,7 @@ import type {
   UrlRecords,
   NameRecords,
   ImageBreakpoints,
+  ImageAttributes,
 } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 import {
   generateBreakpointImages,
@@ -138,12 +139,6 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
   public urls = {} as UrlRecords
 
   /**
-   * The container object for the attributes of the
-   * original and breakpoint files
-   */
-  public responsiveImages: any
-
-  /**
    * The image size of the original file in bytes
    */
   public size?: number | undefined
@@ -213,7 +208,8 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     this.path = attributes.path || ''
     this.isLocal = !!this.path
 
-    this.names = this.urls = {} as UrlRecords
+    this.names = {} as NameRecords
+    this.urls = {} as UrlRecords
   }
 
   public get attributes() {
@@ -371,8 +367,6 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
       height,
     })
 
-    this.responsiveImages = enhancedImageData
-
     /**
      * Images has been persisted
      */
@@ -388,28 +382,43 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
      */
     await this.getDisk().delete(this.path!)
 
-    return enhancedImageData
+    return _.merge(enhancedImageData, this.urls)
   }
 
   /**
-   * Delete the image from the disk
+   * Delete original and responsive images from the disk
    */
   public async delete() {
-    //Todo: This needs to be an iteration
-
     if (!this.isPersisted) {
       return
     }
 
+    /**
+     * Delete the original image
+     */
     await this.getDisk().delete(this.name!)
+    /**
+     * Delete the responsive images
+     */
+    if (this.breakpoints) {
+      for (const key in this.breakpoints) {
+        if (Object.prototype.hasOwnProperty.call(this.breakpoints, key)) {
+          const breakpointImage = this.breakpoints[key] as ImageAttributes
+          await this.getDisk().delete(breakpointImage.name!)
+        }
+      }
+    }
+
     this.isDeleted = true
     this.isPersisted = false
   }
 
-  /**
-   * Computes the URLs for the breakpoint images
-   */
-  public async computeUrls() {
+  public async computeUrls(options?: {
+    forced: boolean
+    signedUrlOptions?: ContentHeaders & { expiresIn?: string | number }
+  }) {
+    const { forced, signedUrlOptions } = options || {}
+
     /**
      * Cannot compute url for a non persisted image
      */
@@ -418,16 +427,18 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     }
 
     /**
-     * Do not compute url unless preComputeUrl is set to true
+     * Compute urls when preComputeUrls is set to true
+     * or the `preComputeUrls` function exists
+     * or the computation is forced
      */
-    if (!this.options?.preComputeUrls) {
+    if (!this.options?.preComputeUrls || !forced) {
       return
     }
 
     const disk = this.getDisk()
 
     /**
-     * Generate url using the user defined preComputeUrl method
+     * Generate url using the user defined preComputeUrls method
      */
     if (typeof this.options.preComputeUrls === 'function') {
       this.urls = await this.options.preComputeUrls(disk, this)
@@ -435,37 +446,39 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     }
 
     /**
-     * Self compute the URL if "preComputeUrl" is set to true
+     * Iterative URL-computation logic
      */
-    for (const key in this.responsiveImages) {
-      if (['name', 'breakpoints'].includes(key) === false) continue
+    const attachmentData = this.toJSON()
+    if (attachmentData) {
+      for (const key in attachmentData) {
+        if (['name', 'breakpoints'].includes(key) === false) continue
 
-      const value = this.responsiveImages[key]
-      let url: string
-      if (key === 'name') {
-        const name = value
-        const imageVisibility = await disk.getVisibility(name)
-        if (imageVisibility === 'private') {
-          url = await disk.getSignedUrl(name)
-        } else {
-          url = await disk.getUrl(name)
-        }
-        this.urls['original'] = url
-        this.responsiveImages.url = url
-      } else if (key === 'breakpoints') {
-        for (const breakpoint in value) {
-          if (Object.prototype.hasOwnProperty.call(value, breakpoint)) {
-            const breakpointImageData: ImageInfo = value?.[breakpoint]
-            if (breakpointImageData) {
-              const imageVisibility = await disk.getVisibility(breakpointImageData.name!)
-              if (imageVisibility === 'private') {
-                url = await disk.getSignedUrl(breakpointImageData.name!)
-                this.urls[breakpoint] = url
-                this.responsiveImages.breakpoints[breakpoint].url = url
-              } else {
-                url = await disk.getUrl(breakpointImageData.name!)
-                this.urls[breakpoint] = url
-                this.responsiveImages.breakpoints[breakpoint].url = url
+        const value = attachmentData[key]
+        let url: string
+        if (key === 'name') {
+          const name = value as string
+          const imageVisibility = await disk.getVisibility(name)
+          if (imageVisibility === 'private') {
+            url = await disk.getSignedUrl(name, signedUrlOptions || undefined)
+          } else {
+            url = await disk.getUrl(name)
+          }
+          this.urls['url'] = url
+        } else if (key === 'breakpoints') {
+          for (const breakpoint in value) {
+            if (Object.prototype.hasOwnProperty.call(value, breakpoint)) {
+              const breakpointImageData: Exclude<ImageInfo, 'breakpoints'> = value?.[breakpoint]
+              if (breakpointImageData) {
+                const imageVisibility = await disk.getVisibility(breakpointImageData.name!)
+                if (imageVisibility === 'private') {
+                  url = await disk.getSignedUrl(
+                    breakpointImageData.name!,
+                    signedUrlOptions || undefined
+                  )
+                } else {
+                  url = await disk.getUrl(breakpointImageData.name!)
+                }
+                this.urls['breakpoints'][breakpoint] = { url }
               }
             }
           }
@@ -478,28 +491,22 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
    * Returns the URLs for the breakpoint images.
    */
   public async getUrls() {
-    const urls = {} as UrlRecords
-    for (const key in this.names) {
-      if (Object.prototype.hasOwnProperty.call(this.names, key)) {
-        const name = this.names[key]
-        urls[key] = await this.getDisk().getUrl(name)
-      }
-    }
-    return urls
+    /**
+     * Compute the URLs first
+     */
+    this.computeUrls({ forced: true })
+    return this.urls
   }
 
   /**
    * Returns the signed URLs for the image
    */
   public async getSignedUrls(options?: ContentHeaders & { expiresIn?: string | number }) {
-    const urls = {} as UrlRecords
-    for (const key in this.names) {
-      if (Object.prototype.hasOwnProperty.call(this.names, key)) {
-        const name = this.names[key]
-        urls[key] = await this.getDisk().getSignedUrl(name, options)
-      }
-    }
-    return urls
+    /**
+     * Forcefully compute the URLs first
+     */
+    this.computeUrls({ forced: true, ...options })
+    return this.urls
   }
 
   /**
@@ -508,9 +515,12 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
   public toJSON() {
     const { path, ...originalAttributes } = this.attributes
 
-    return {
-      ...originalAttributes,
-      breakpoints: this.breakpoints,
-    }
+    return _.merge(
+      {
+        ...originalAttributes,
+        breakpoints: this.breakpoints,
+      },
+      this.urls
+    )
   }
 }
