@@ -40,7 +40,7 @@ test.group('@attachment | insert', (group) => {
     //await cleanup(app)
   })
 
-  test.only('save attachment to the db and on disk', async (assert) => {
+  test('save attachment to the db and on disk', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -77,7 +77,6 @@ test.group('@attachment | insert', (group) => {
       .attach('avatar', join(__dirname, '../cat.jpeg'))
 
     const users = await User.all()
-    console.log('from spec: ', users[0].avatar)
 
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)

@@ -506,14 +506,11 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
    * Serialize attachment instance to JSON
    */
   public toJSON() {
-    if (this.responsiveImages) {
-      this.responsiveImages.url = this.urls.original
-      for (const key in this.responsiveImages.breakpoints) {
-        if (Object.prototype.hasOwnProperty.call(this.responsiveImages.breakpoints, key)) {
-          this.responsiveImages['breakpoints'][key] = this.urls[key]
-        }
-      }
-      return this.responsiveImages
-    } else return null
+    const { path, ...originalAttributes } = this.attributes
+
+    return {
+      ...originalAttributes,
+      breakpoints: this.breakpoints,
+    }
   }
 }
