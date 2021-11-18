@@ -45,7 +45,7 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
     /**
      * The url is available only when "isPersisted" is true.
      */
-    url: string
+    url: string | null
 
     /**
      * The file size in bytes
@@ -53,7 +53,7 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
     size: number
 
     /**
-     * The file extname. Inferred from the bodyparser file extname
+     * The file extname. Inferred from the BodyParser file extname
      * property
      */
     extname: string
@@ -102,7 +102,7 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
     /**
      * The URLs object
      */
-    urls?: UrlRecords
+    urls?: UrlRecords | null
 
     /**
      * "isLocal = true" means the instance is created locally
@@ -149,17 +149,19 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
     /**
      * Returns the URL for the file. Same as "Drive.getUrl()"
      */
-    getUrls(): Promise<UrlRecords>
+    getUrls(): Promise<UrlRecords | null>
 
     /**
      * Returns the signed URLs and `ImageAttributes` for each responsive image
      */
-    getSignedUrls(options?: ContentHeaders & { expiresIn?: string | number }): Promise<UrlRecords>
+    getSignedUrls(
+      options?: ContentHeaders & { expiresIn?: string | number }
+    ): Promise<UrlRecords | null>
 
     /**
      * Attachment attributes
      */
-    toJSON(): (AttachmentAttributes & { url?: string }) | null
+    toJSON(): (AttachmentAttributes & { url?: string | null }) | null
   }
 
   /**

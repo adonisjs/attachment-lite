@@ -23,7 +23,9 @@ import { setup, cleanup, setupApplication } from '../test-helpers'
 
 let app: ApplicationContract
 
-test.group('@attachment | insert', (group) => {
+type AttachmentBody = { body: { avatar: ResponsiveAttachment } }
+
+test.group('@responsiveAttachment | insert', (group) => {
   group.before(async () => {
     app = await setupApplication()
     await setup(app)
@@ -40,7 +42,7 @@ test.group('@attachment | insert', (group) => {
     await cleanup(app)
   })
 
-  test.only('save attachment to the db and on disk', async (assert) => {
+  test('save attachment to the db and on disk', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -72,14 +74,15 @@ test.group('@attachment | insert', (group) => {
       })
     })
 
-    const { body }: { body: { avatar: ResponsiveAttachment } } = await supertest(server)
+    const { body }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.all()
 
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
+
     assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
 
     assert.isTrue(await Drive.exists(body.avatar.name!))
@@ -93,11 +96,11 @@ test.group('@attachment | insert', (group) => {
     assert.isTrue(body.avatar.breakpoints!.medium.size < body.avatar.breakpoints!.large.size)
     assert.isTrue(body.avatar.breakpoints!.large.size < body.avatar.size!)
 
-    assert.exists(body.avatar.url)
-    assert.exists(body.avatar.breakpoints!.large.url)
-    assert.exists(body.avatar.breakpoints!.medium.url)
-    assert.exists(body.avatar.breakpoints!.small.url)
-    assert.exists(body.avatar.breakpoints!.thumbnail.url)
+    assert.notExists(body.avatar.url)
+    assert.notExists(body.avatar.breakpoints!.large.url)
+    assert.notExists(body.avatar.breakpoints!.medium.url)
+    assert.notExists(body.avatar.breakpoints!.small.url)
+    assert.notExists(body.avatar.breakpoints!.thumbnail.url)
   })
 
   test('cleanup attachments when save call fails', async (assert) => {
@@ -137,19 +140,35 @@ test.group('@attachment | insert', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
+    const { body }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.all()
 
     assert.lengthOf(users, 1)
     assert.isNull(users[0].avatar)
-    assert.isFalse(await Drive.exists(body.avatar.name))
+
+    assert.isFalse(await Drive.exists(body.avatar.name!))
+    assert.isFalse(await Drive.exists(body.avatar.breakpoints!.large.name))
+    assert.isFalse(await Drive.exists(body.avatar.breakpoints!.medium.name))
+    assert.isFalse(await Drive.exists(body.avatar.breakpoints!.small.name))
+    assert.isFalse(await Drive.exists(body.avatar.breakpoints!.thumbnail.name))
+
+    assert.isTrue(body.avatar.breakpoints!.thumbnail.size < body.avatar.breakpoints!.small.size)
+    assert.isTrue(body.avatar.breakpoints!.small.size < body.avatar.breakpoints!.medium.size)
+    assert.isTrue(body.avatar.breakpoints!.medium.size < body.avatar.breakpoints!.large.size)
+    assert.isTrue(body.avatar.breakpoints!.large.size < body.avatar.size!)
+
+    assert.notExists(body.avatar.url)
+    assert.notExists(body.avatar.breakpoints!.large.url)
+    assert.notExists(body.avatar.breakpoints!.medium.url)
+    assert.notExists(body.avatar.breakpoints!.small.url)
+    assert.notExists(body.avatar.breakpoints!.thumbnail.url)
   })
 })
 
-test.group('@attachment | insert with transaction', (group) => {
+test.group('@responsiveAttachment | insert with transaction', (group) => {
   group.before(async () => {
     app = await setupApplication()
     await setup(app)
@@ -202,9 +221,9 @@ test.group('@attachment | insert with transaction', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
+    const { body }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.all()
 
@@ -212,7 +231,22 @@ test.group('@attachment | insert with transaction', (group) => {
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
 
-    assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isTrue(await Drive.exists(body.avatar.name!))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.thumbnail.name))
+
+    assert.isTrue(body.avatar.breakpoints!.thumbnail.size < body.avatar.breakpoints!.small.size)
+    assert.isTrue(body.avatar.breakpoints!.small.size < body.avatar.breakpoints!.medium.size)
+    assert.isTrue(body.avatar.breakpoints!.medium.size < body.avatar.breakpoints!.large.size)
+    assert.isTrue(body.avatar.breakpoints!.large.size < body.avatar.size!)
+
+    assert.notExists(body.avatar.url)
+    assert.notExists(body.avatar.breakpoints!.large.url)
+    assert.notExists(body.avatar.breakpoints!.medium.url)
+    assert.notExists(body.avatar.breakpoints!.small.url)
+    assert.notExists(body.avatar.breakpoints!.thumbnail.url)
   })
 
   test('cleanup attachments when save call fails', async (assert) => {
@@ -257,15 +291,31 @@ test.group('@attachment | insert with transaction', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
+    const { body }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.all()
 
     assert.lengthOf(users, 1)
     assert.isNull(users[0].avatar)
-    assert.isFalse(await Drive.exists(body.avatar.name))
+
+    assert.isFalse(await Drive.exists(body.avatar.name!))
+    assert.isFalse(await Drive.exists(body.avatar.breakpoints!.large.name))
+    assert.isFalse(await Drive.exists(body.avatar.breakpoints!.medium.name))
+    assert.isFalse(await Drive.exists(body.avatar.breakpoints!.small.name))
+    assert.isFalse(await Drive.exists(body.avatar.breakpoints!.thumbnail.name))
+
+    assert.isTrue(body.avatar.breakpoints!.thumbnail.size < body.avatar.breakpoints!.small.size)
+    assert.isTrue(body.avatar.breakpoints!.small.size < body.avatar.breakpoints!.medium.size)
+    assert.isTrue(body.avatar.breakpoints!.medium.size < body.avatar.breakpoints!.large.size)
+    assert.isTrue(body.avatar.breakpoints!.large.size < body.avatar.size!)
+
+    assert.notExists(body.avatar.url)
+    assert.notExists(body.avatar.breakpoints!.large.url)
+    assert.notExists(body.avatar.breakpoints!.medium.url)
+    assert.notExists(body.avatar.breakpoints!.small.url)
+    assert.notExists(body.avatar.breakpoints!.thumbnail.url)
   })
 
   test('cleanup attachments when rollback is called after success', async (assert) => {
@@ -303,18 +353,28 @@ test.group('@attachment | insert with transaction', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
+    const { body }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.all()
 
     assert.lengthOf(users, 0)
-    assert.isFalse(await Drive.exists(body.avatar.name))
+    assert.isFalse(await Drive.exists(body.avatar.name!))
+    assert.isFalse(await Drive.exists(body.avatar.breakpoints!.large.name))
+    assert.isFalse(await Drive.exists(body.avatar.breakpoints!.medium.name))
+    assert.isFalse(await Drive.exists(body.avatar.breakpoints!.small.name))
+    assert.isFalse(await Drive.exists(body.avatar.breakpoints!.thumbnail.name))
+
+    assert.notExists(body.avatar.url)
+    assert.notExists(body.avatar.breakpoints!.large.url)
+    assert.notExists(body.avatar.breakpoints!.medium.url)
+    assert.notExists(body.avatar.breakpoints!.small.url)
+    assert.notExists(body.avatar.breakpoints!.thumbnail.url)
   })
 })
 
-test.group('@attachment | update', (group) => {
+test.group('@responsiveAttachment | update', (group) => {
   group.before(async () => {
     app = await setupApplication()
     await setup(app)
@@ -362,21 +422,49 @@ test.group('@attachment | update', (group) => {
       })
     })
 
-    const { body: firstResponse } = await supertest(server)
+    const { body: firstResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
-    const { body: secondResponse } = await supertest(server)
+    const { body: secondResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.all()
 
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), secondResponse.avatar)
-    assert.isFalse(await Drive.exists(firstResponse.avatar.name))
-    assert.isTrue(await Drive.exists(secondResponse.avatar.name))
+
+    assert.isFalse(await Drive.exists(firstResponse.avatar.name!))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.medium.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.small.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.isTrue(await Drive.exists(secondResponse.avatar.name!))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.notExists(secondResponse.avatar.url)
+    assert.notExists(secondResponse.avatar.breakpoints!.large.url)
+    assert.notExists(secondResponse.avatar.breakpoints!.medium.url)
+    assert.notExists(secondResponse.avatar.breakpoints!.small.url)
+    assert.notExists(secondResponse.avatar.breakpoints!.thumbnail.url)
+
+    assert.isTrue(
+      secondResponse.avatar.breakpoints!.thumbnail.size <
+        secondResponse.avatar.breakpoints!.small.size
+    )
+    assert.isTrue(
+      secondResponse.avatar.breakpoints!.small.size < secondResponse.avatar.breakpoints!.medium.size
+    )
+    assert.isTrue(
+      secondResponse.avatar.breakpoints!.medium.size < secondResponse.avatar.breakpoints!.large.size
+    )
+    assert.isTrue(secondResponse.avatar.breakpoints!.large.size < secondResponse.avatar.size!)
   })
 
   test('cleanup attachments when save call fails', async (assert) => {
@@ -414,25 +502,41 @@ test.group('@attachment | update', (group) => {
       })
     })
 
-    const { body: firstResponse } = await supertest(server)
+    const { body: firstResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
-    const { body: secondResponse } = await supertest(server)
+    const { body: secondResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.all()
 
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
-    assert.isTrue(await Drive.exists(firstResponse.avatar.name))
-    assert.isFalse(await Drive.exists(secondResponse.avatar.name))
+
+    assert.isTrue(await Drive.exists(firstResponse.avatar.name!))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.isFalse(await Drive.exists(secondResponse.avatar.name!))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.breakpoints!.large.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.breakpoints!.medium.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.breakpoints!.small.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.notExists(firstResponse.avatar.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.large.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.medium.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.small.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.thumbnail.url)
   })
 })
 
-test.group('@attachment | update with transaction', (group) => {
+test.group('@responsiveAttachment | update with transaction', (group) => {
   group.before(async () => {
     app = await setupApplication()
     await setup(app)
@@ -483,21 +587,49 @@ test.group('@attachment | update with transaction', (group) => {
       })
     })
 
-    const { body: firstResponse } = await supertest(server)
+    const { body: firstResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
-    const { body: secondResponse } = await supertest(server)
+    const { body: secondResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.all()
 
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), secondResponse.avatar)
-    assert.isFalse(await Drive.exists(firstResponse.avatar.name))
-    assert.isTrue(await Drive.exists(secondResponse.avatar.name))
+
+    assert.isFalse(await Drive.exists(firstResponse.avatar.name!))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.medium.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.small.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.isTrue(await Drive.exists(secondResponse.avatar.name!))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.notExists(secondResponse.avatar.url)
+    assert.notExists(secondResponse.avatar.breakpoints!.large.url)
+    assert.notExists(secondResponse.avatar.breakpoints!.medium.url)
+    assert.notExists(secondResponse.avatar.breakpoints!.small.url)
+    assert.notExists(secondResponse.avatar.breakpoints!.thumbnail.url)
+
+    assert.isTrue(
+      secondResponse.avatar.breakpoints!.thumbnail.size <
+        secondResponse.avatar.breakpoints!.small.size
+    )
+    assert.isTrue(
+      secondResponse.avatar.breakpoints!.small.size < secondResponse.avatar.breakpoints!.medium.size
+    )
+    assert.isTrue(
+      secondResponse.avatar.breakpoints!.medium.size < secondResponse.avatar.breakpoints!.large.size
+    )
+    assert.isTrue(secondResponse.avatar.breakpoints!.large.size < secondResponse.avatar.size!)
   })
 
   test('cleanup attachments when save call fails', async (assert) => {
@@ -540,21 +672,49 @@ test.group('@attachment | update with transaction', (group) => {
       })
     })
 
-    const { body: firstResponse } = await supertest(server)
+    const { body: firstResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
-    const { body: secondResponse } = await supertest(server)
+    const { body: secondResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.all()
 
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
-    assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
-    assert.isTrue(await Drive.exists(firstResponse.avatar.name))
-    assert.isFalse(await Drive.exists(secondResponse.avatar.name))
+    assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar!)
+
+    assert.isTrue(await Drive.exists(firstResponse.avatar.name!))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.isFalse(await Drive.exists(secondResponse.avatar.name!))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.breakpoints!.large.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.breakpoints!.medium.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.breakpoints!.small.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.notExists(firstResponse.avatar.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.large.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.medium.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.small.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.thumbnail.url)
+
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.thumbnail.size <
+        firstResponse.avatar.breakpoints!.small.size
+    )
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.small.size < firstResponse.avatar.breakpoints!.medium.size
+    )
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.medium.size < firstResponse.avatar.breakpoints!.large.size
+    )
+    assert.isTrue(firstResponse.avatar.breakpoints!.large.size < firstResponse.avatar.size!)
   })
 
   test('cleanup attachments when rollback is called after success', async (assert) => {
@@ -595,25 +755,53 @@ test.group('@attachment | update with transaction', (group) => {
       })
     })
 
-    const { body: firstResponse } = await supertest(server)
+    const { body: firstResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
-    const { body: secondResponse } = await supertest(server)
+    const { body: secondResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.all()
 
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
-    assert.isTrue(await Drive.exists(firstResponse.avatar.name))
-    assert.isFalse(await Drive.exists(secondResponse.avatar.name))
+
+    assert.isTrue(await Drive.exists(firstResponse.avatar.name!))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.isFalse(await Drive.exists(secondResponse.avatar.name!))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.breakpoints!.large.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.breakpoints!.medium.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.breakpoints!.small.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.notExists(firstResponse.avatar.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.large.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.medium.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.small.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.thumbnail.url)
+
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.thumbnail.size <
+        firstResponse.avatar.breakpoints!.small.size
+    )
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.small.size < firstResponse.avatar.breakpoints!.medium.size
+    )
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.medium.size < firstResponse.avatar.breakpoints!.large.size
+    )
+    assert.isTrue(firstResponse.avatar.breakpoints!.large.size < firstResponse.avatar.size!)
   })
 })
 
-test.group('@attachment | resetToNull', (group) => {
+test.group('@responsiveAttachment | resetToNull', (group) => {
   group.before(async () => {
     app = await setupApplication()
     await setup(app)
@@ -661,9 +849,9 @@ test.group('@attachment | resetToNull', (group) => {
       })
     })
 
-    const { body: firstResponse } = await supertest(server)
+    const { body: firstResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     await supertest(server).post('/')
 
@@ -671,7 +859,18 @@ test.group('@attachment | resetToNull', (group) => {
 
     assert.lengthOf(users, 1)
     assert.isNull(users[0].avatar)
-    assert.isFalse(await Drive.exists(firstResponse.avatar.name))
+
+    assert.isFalse(await Drive.exists(firstResponse.avatar.name!))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.medium.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.small.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.notExists(firstResponse.avatar.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.large.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.medium.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.small.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.thumbnail.url)
   })
 
   test('do not remove old file when resetting to null fails', async (assert) => {
@@ -709,9 +908,9 @@ test.group('@attachment | resetToNull', (group) => {
       })
     })
 
-    const { body: firstResponse } = await supertest(server)
+    const { body: firstResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     await supertest(server).post('/')
 
@@ -719,12 +918,36 @@ test.group('@attachment | resetToNull', (group) => {
 
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
+
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
-    assert.isTrue(await Drive.exists(firstResponse.avatar.name))
+
+    assert.isTrue(await Drive.exists(firstResponse.avatar.name!))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.notExists(firstResponse.avatar.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.large.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.medium.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.small.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.thumbnail.url)
+
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.thumbnail.size <
+        firstResponse.avatar.breakpoints!.small.size
+    )
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.small.size < firstResponse.avatar.breakpoints!.medium.size
+    )
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.medium.size < firstResponse.avatar.breakpoints!.large.size
+    )
+    assert.isTrue(firstResponse.avatar.breakpoints!.large.size < firstResponse.avatar.size!)
   })
 })
 
-test.group('@attachment | resetToNull with transaction', (group) => {
+test.group('@responsiveAttachment | resetToNull with transaction', (group) => {
   group.before(async () => {
     app = await setupApplication()
     await setup(app)
@@ -775,9 +998,9 @@ test.group('@attachment | resetToNull with transaction', (group) => {
       })
     })
 
-    const { body: firstResponse } = await supertest(server)
+    const { body: firstResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     await supertest(server).post('/')
 
@@ -785,7 +1008,18 @@ test.group('@attachment | resetToNull with transaction', (group) => {
 
     assert.lengthOf(users, 1)
     assert.isNull(users[0].avatar)
-    assert.isFalse(await Drive.exists(firstResponse.avatar.name))
+
+    assert.isFalse(await Drive.exists(firstResponse.avatar.name!))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.medium.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.small.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.notExists(firstResponse.avatar.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.large.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.medium.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.small.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.thumbnail.url)
   })
 
   test('do not remove old file when resetting to null fails', async (assert) => {
@@ -828,9 +1062,9 @@ test.group('@attachment | resetToNull with transaction', (group) => {
       })
     })
 
-    const { body: firstResponse } = await supertest(server)
+    const { body: firstResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     await supertest(server).post('/')
 
@@ -838,8 +1072,32 @@ test.group('@attachment | resetToNull with transaction', (group) => {
 
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
+
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
-    assert.isTrue(await Drive.exists(firstResponse.avatar.name))
+
+    assert.isTrue(await Drive.exists(firstResponse.avatar.name!))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.notExists(firstResponse.avatar.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.large.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.medium.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.small.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.thumbnail.url)
+
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.thumbnail.size <
+        firstResponse.avatar.breakpoints!.small.size
+    )
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.small.size < firstResponse.avatar.breakpoints!.medium.size
+    )
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.medium.size < firstResponse.avatar.breakpoints!.large.size
+    )
+    assert.isTrue(firstResponse.avatar.breakpoints!.large.size < firstResponse.avatar.size!)
   })
 
   test('do not remove old file when rollback was performed after success', async (assert) => {
@@ -878,9 +1136,9 @@ test.group('@attachment | resetToNull with transaction', (group) => {
       })
     })
 
-    const { body: firstResponse } = await supertest(server)
+    const { body: firstResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     await supertest(server).post('/')
 
@@ -889,11 +1147,34 @@ test.group('@attachment | resetToNull with transaction', (group) => {
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
-    assert.isTrue(await Drive.exists(firstResponse.avatar.name))
+
+    assert.isTrue(await Drive.exists(firstResponse.avatar.name!))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.notExists(firstResponse.avatar.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.large.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.medium.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.small.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.thumbnail.url)
+
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.thumbnail.size <
+        firstResponse.avatar.breakpoints!.small.size
+    )
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.small.size < firstResponse.avatar.breakpoints!.medium.size
+    )
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.medium.size < firstResponse.avatar.breakpoints!.large.size
+    )
+    assert.isTrue(firstResponse.avatar.breakpoints!.large.size < firstResponse.avatar.size!)
   })
 })
 
-test.group('@attachment | delete', (group) => {
+test.group('@responsiveAttachment | delete', (group) => {
   group.before(async () => {
     app = await setupApplication()
     await setup(app)
@@ -941,16 +1222,27 @@ test.group('@attachment | delete', (group) => {
       })
     })
 
-    const { body: firstResponse } = await supertest(server)
+    const { body: firstResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const user = await User.firstOrFail()
     await user.delete()
 
     const users = await User.all()
     assert.lengthOf(users, 0)
-    assert.isFalse(await Drive.exists(firstResponse.avatar.name))
+
+    assert.isFalse(await Drive.exists(firstResponse.avatar.name!))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.medium.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.small.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.notExists(firstResponse.avatar.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.large.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.medium.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.small.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.thumbnail.url)
   })
 
   test('do not delete attachment when deletion fails', async (assert) => {
@@ -988,23 +1280,36 @@ test.group('@attachment | delete', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
+    const { body }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const user = await User.firstOrFail()
+
     try {
+      // Failing due to the `User.before('delete') hook`.
+      // See above
       await user.delete()
-    } catch {}
+    } catch (error) {}
 
     const users = await User.all()
     assert.lengthOf(users, 1)
     assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
-    assert.isTrue(await Drive.exists(body.avatar.name))
+
+    assert.isTrue(await Drive.exists(body.avatar.name!))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.thumbnail.name))
+
+    assert.isTrue(body.avatar.breakpoints!.thumbnail.size < body.avatar.breakpoints!.small.size)
+    assert.isTrue(body.avatar.breakpoints!.small.size < body.avatar.breakpoints!.medium.size)
+    assert.isTrue(body.avatar.breakpoints!.medium.size < body.avatar.breakpoints!.large.size)
+    assert.isTrue(body.avatar.breakpoints!.large.size < body.avatar.size!)
   })
 })
 
-test.group('@attachment | delete with transaction', (group) => {
+test.group('@responsiveAttachment | delete with transaction', (group) => {
   group.before(async () => {
     app = await setupApplication()
     await setup(app)
@@ -1053,20 +1358,48 @@ test.group('@attachment | delete with transaction', (group) => {
       })
     })
 
-    const { body: firstResponse } = await supertest(server)
+    const { body: firstResponse }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const user = await User.firstOrFail()
     const trx = await Db.transaction()
     await user.useTransaction(trx).delete()
-    assert.isTrue(await Drive.exists(firstResponse.avatar.name))
+
+    assert.isTrue(await Drive.exists(firstResponse.avatar.name!))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.thumbnail.name))
+
+    assert.notExists(firstResponse.avatar.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.large.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.medium.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.small.url)
+    assert.notExists(firstResponse.avatar.breakpoints!.thumbnail.url)
+
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.thumbnail.size <
+        firstResponse.avatar.breakpoints!.small.size
+    )
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.small.size < firstResponse.avatar.breakpoints!.medium.size
+    )
+    assert.isTrue(
+      firstResponse.avatar.breakpoints!.medium.size < firstResponse.avatar.breakpoints!.large.size
+    )
+    assert.isTrue(firstResponse.avatar.breakpoints!.large.size < firstResponse.avatar.size!)
 
     await trx.commit()
 
     const users = await User.all()
     assert.lengthOf(users, 0)
-    assert.isFalse(await Drive.exists(firstResponse.avatar.name))
+
+    assert.isFalse(await Drive.exists(firstResponse.avatar.name!))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.medium.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.small.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.breakpoints!.thumbnail.name))
   })
 
   test('do not delete attachment when deletion fails', async (assert) => {
@@ -1105,9 +1438,9 @@ test.group('@attachment | delete with transaction', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
+    const { body }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const user = await User.firstOrFail()
     const trx = await Db.transaction()
@@ -1115,18 +1448,34 @@ test.group('@attachment | delete with transaction', (group) => {
     try {
       await user.useTransaction(trx).delete()
     } catch {
-      assert.isTrue(await Drive.exists(body.avatar.name))
+      assert.isTrue(await Drive.exists(body.avatar.name!))
+      assert.isTrue(await Drive.exists(body.avatar.breakpoints!.large.name))
+      assert.isTrue(await Drive.exists(body.avatar.breakpoints!.medium.name))
+      assert.isTrue(await Drive.exists(body.avatar.breakpoints!.small.name))
+      assert.isTrue(await Drive.exists(body.avatar.breakpoints!.thumbnail.name))
+
       await trx.rollback()
     }
 
     const users = await User.all()
+
     assert.lengthOf(users, 1)
     assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
-    assert.isTrue(await Drive.exists(body.avatar.name))
+
+    assert.isTrue(await Drive.exists(body.avatar.name!))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.thumbnail.name))
+
+    assert.isTrue(body.avatar.breakpoints!.thumbnail.size < body.avatar.breakpoints!.small.size)
+    assert.isTrue(body.avatar.breakpoints!.small.size < body.avatar.breakpoints!.medium.size)
+    assert.isTrue(body.avatar.breakpoints!.medium.size < body.avatar.breakpoints!.large.size)
+    assert.isTrue(body.avatar.breakpoints!.large.size < body.avatar.size!)
   })
 })
 
-test.group('@attachment | find', (group) => {
+test.group('@responsiveAttachment | find', (group) => {
   group.before(async () => {
     app = await setupApplication()
     await setup(app)
@@ -1143,7 +1492,7 @@ test.group('@attachment | find', (group) => {
     await cleanup(app)
   })
 
-  test('pre compute url on find', async (assert) => {
+  test('pre-compute urls on find', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1175,19 +1524,39 @@ test.group('@attachment | find', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
+    const { body }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const user = await User.firstOrFail()
+
     assert.instanceOf(user.avatar, ResponsiveAttachment)
+
     assert.isDefined(user.avatar?.urls)
-    assert.isDefined(body.avatar.urls)
+    assert.isDefined(user.avatar?.breakpoints?.large.url)
+    assert.isDefined(user.avatar?.breakpoints?.medium.url)
+    assert.isDefined(user.avatar?.breakpoints?.small.url)
+    assert.isDefined(user.avatar?.breakpoints?.thumbnail.url)
 
-    assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isDefined(body.avatar.url)
+    assert.isDefined(body.avatar?.breakpoints?.large.url)
+    assert.isDefined(body.avatar?.breakpoints?.medium.url)
+    assert.isDefined(body.avatar?.breakpoints?.small.url)
+    assert.isDefined(body.avatar?.breakpoints?.thumbnail.url)
+
+    assert.isTrue(await Drive.exists(body.avatar.name!))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.thumbnail.name))
+
+    assert.isTrue(body.avatar.breakpoints!.thumbnail.size < body.avatar.breakpoints!.small.size)
+    assert.isTrue(body.avatar.breakpoints!.small.size < body.avatar.breakpoints!.medium.size)
+    assert.isTrue(body.avatar.breakpoints!.medium.size < body.avatar.breakpoints!.large.size)
+    assert.isTrue(body.avatar.breakpoints!.large.size < body.avatar.size!)
   })
 
-  test('do not pre compute when preComputeUrls is not enabled', async (assert) => {
+  test('do not pre-compute when preComputeUrls is not enabled', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1219,20 +1588,30 @@ test.group('@attachment | find', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
+    const { body }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const user = await User.firstOrFail()
     assert.instanceOf(user.avatar, ResponsiveAttachment)
-    assert.isUndefined(user.avatar?.urls)
-    assert.isUndefined(body.avatar.url)
 
-    assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isNull(user.avatar?.urls)
+    assert.isNull(body.avatar.url)
+
+    assert.isTrue(await Drive.exists(body.avatar.name!))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.thumbnail.name))
+
+    assert.isTrue(body.avatar.breakpoints!.thumbnail.size < body.avatar.breakpoints!.small.size)
+    assert.isTrue(body.avatar.breakpoints!.small.size < body.avatar.breakpoints!.medium.size)
+    assert.isTrue(body.avatar.breakpoints!.medium.size < body.avatar.breakpoints!.large.size)
+    assert.isTrue(body.avatar.breakpoints!.large.size < body.avatar.size!)
   })
 })
 
-test.group('@attachment | fetch', (group) => {
+test.group('@responsiveAttachment | fetch', (group) => {
   group.before(async () => {
     app = await setupApplication()
     await setup(app)
@@ -1249,7 +1628,7 @@ test.group('@attachment | fetch', (group) => {
     await cleanup(app)
   })
 
-  test('pre compute url on fetch', async (assert) => {
+  test('pre-compute urls on fetch', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1281,19 +1660,38 @@ test.group('@attachment | fetch', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
+    const { body }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.all()
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
-    assert.isDefined(users[0].avatar?.urls)
-    assert.isDefined(body.avatar.url)
 
-    assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isDefined(users[0].avatar?.urls)
+    assert.isDefined(users[0].avatar?.breakpoints?.large.url)
+    assert.isDefined(users[0].avatar?.breakpoints?.medium.url)
+    assert.isDefined(users[0].avatar?.breakpoints?.small.url)
+    assert.isDefined(users[0].avatar?.breakpoints?.thumbnail.url)
+
+    assert.isDefined(body.avatar.url)
+    assert.isDefined(body.avatar?.breakpoints?.large.url)
+    assert.isDefined(body.avatar?.breakpoints?.medium.url)
+    assert.isDefined(body.avatar?.breakpoints?.small.url)
+    assert.isDefined(body.avatar?.breakpoints?.thumbnail.url)
+
+    assert.isTrue(await Drive.exists(body.avatar.name!))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.thumbnail.name))
+
+    assert.isTrue(body.avatar.breakpoints!.thumbnail.size < body.avatar.breakpoints!.small.size)
+    assert.isTrue(body.avatar.breakpoints!.small.size < body.avatar.breakpoints!.medium.size)
+    assert.isTrue(body.avatar.breakpoints!.medium.size < body.avatar.breakpoints!.large.size)
+    assert.isTrue(body.avatar.breakpoints!.large.size < body.avatar.size!)
   })
 
-  test('do not pre compute when preComputeUrls is not enabled', async (assert) => {
+  test('do not pre-compute when preComputeUrls is not enabled', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1325,20 +1723,30 @@ test.group('@attachment | fetch', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
+    const { body }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.all()
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
-    assert.isUndefined(users[0].avatar?.urls)
-    assert.isUndefined(body.avatar.url)
 
-    assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isNull(users[0].avatar?.urls)
+    assert.isNull(body.avatar.url)
+
+    assert.isTrue(await Drive.exists(body.avatar.name!))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.thumbnail.name))
+
+    assert.isTrue(body.avatar.breakpoints!.thumbnail.size < body.avatar.breakpoints!.small.size)
+    assert.isTrue(body.avatar.breakpoints!.small.size < body.avatar.breakpoints!.medium.size)
+    assert.isTrue(body.avatar.breakpoints!.medium.size < body.avatar.breakpoints!.large.size)
+    assert.isTrue(body.avatar.breakpoints!.large.size < body.avatar.size!)
   })
 })
 
-test.group('@attachment | paginate', (group) => {
+test.group('@responsiveAttachment | paginate', (group) => {
   group.before(async () => {
     app = await setupApplication()
     await setup(app)
@@ -1355,7 +1763,7 @@ test.group('@attachment | paginate', (group) => {
     await cleanup(app)
   })
 
-  test('pre compute url on paginate', async (assert) => {
+  test('pre-compute urls on paginate', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1387,19 +1795,38 @@ test.group('@attachment | paginate', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
+    const { body }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.query().paginate(1)
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
-    assert.isDefined(users[0].avatar?.urls)
-    assert.isDefined(body.avatar.url)
 
-    assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isDefined(users[0].avatar?.urls)
+    assert.isDefined(users[0].avatar?.breakpoints?.large.url)
+    assert.isDefined(users[0].avatar?.breakpoints?.medium.url)
+    assert.isDefined(users[0].avatar?.breakpoints?.small.url)
+    assert.isDefined(users[0].avatar?.breakpoints?.thumbnail.url)
+
+    assert.isDefined(body.avatar.url)
+    assert.isDefined(body.avatar?.breakpoints?.large.url)
+    assert.isDefined(body.avatar?.breakpoints?.medium.url)
+    assert.isDefined(body.avatar?.breakpoints?.small.url)
+    assert.isDefined(body.avatar?.breakpoints?.thumbnail.url)
+
+    assert.isTrue(await Drive.exists(body.avatar.name!))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.thumbnail.name))
+
+    assert.isTrue(body.avatar.breakpoints!.thumbnail.size < body.avatar.breakpoints!.small.size)
+    assert.isTrue(body.avatar.breakpoints!.small.size < body.avatar.breakpoints!.medium.size)
+    assert.isTrue(body.avatar.breakpoints!.medium.size < body.avatar.breakpoints!.large.size)
+    assert.isTrue(body.avatar.breakpoints!.large.size < body.avatar.size!)
   })
 
-  test('do not pre compute when preComputeUrls is not enabled', async (assert) => {
+  test('do not pre-compute when preComputeUrls is not enabled', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1431,15 +1858,25 @@ test.group('@attachment | paginate', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
+    const { body }: AttachmentBody = await supertest(server)
       .post('/')
-      .attach('avatar', join(__dirname, '../Status-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
 
     const users = await User.query().paginate(1)
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
-    assert.isUndefined(users[0].avatar?.urls)
-    assert.isUndefined(body.avatar.url)
 
-    assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isNull(users[0].avatar?.urls)
+    assert.isNull(body.avatar.url)
+
+    assert.isTrue(await Drive.exists(body.avatar.name!))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.large.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.medium.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.small.name))
+    assert.isTrue(await Drive.exists(body.avatar.breakpoints!.thumbnail.name))
+
+    assert.isTrue(body.avatar.breakpoints!.thumbnail.size < body.avatar.breakpoints!.small.size)
+    assert.isTrue(body.avatar.breakpoints!.small.size < body.avatar.breakpoints!.medium.size)
+    assert.isTrue(body.avatar.breakpoints!.medium.size < body.avatar.breakpoints!.large.size)
+    assert.isTrue(body.avatar.breakpoints!.large.size < body.avatar.size!)
   })
 })

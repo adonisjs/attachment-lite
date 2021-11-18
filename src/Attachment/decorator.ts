@@ -18,8 +18,6 @@ import type {
 
 import { ResponsiveAttachment } from './index'
 
-import merge from 'lodash/merge'
-
 /**
  * Default breakpoint options
  */
@@ -182,15 +180,17 @@ async function deleteWithAttachments() {
 }
 
 /**
- * Pre compute URLs after a row has been fetched from the database
+ * Pre-compute URLs after a row has been fetched from the database
  */
 async function afterFind(modelInstance: LucidRow) {
   await Promise.all(
     modelInstance.constructor['attachments'].map(
       (attachmentField: { property: string; options?: AttachmentOptions }) => {
         if (modelInstance[attachmentField.property]) {
-          modelInstance[attachmentField.property].setOptions(attachmentField.options)
-          return modelInstance[attachmentField.property].computeUrls()
+          ;(modelInstance[attachmentField.property] as ResponsiveAttachment).setOptions(
+            attachmentField.options
+          )
+          return (modelInstance[attachmentField.property] as ResponsiveAttachment).computeUrls()
         }
       }
     )
@@ -198,7 +198,7 @@ async function afterFind(modelInstance: LucidRow) {
 }
 
 /**
- * Pre compute URLs after more than one rows are fetched
+ * Pre-compute URLs after more than one rows are fetched
  */
 async function afterFetch(modelInstances: LucidRow[]) {
   await Promise.all(modelInstances.map((row) => afterFind(row)))
@@ -213,25 +213,14 @@ export const responsiveAttachment: ResponsiveAttachmentDecorator = (options) => 
     Model.boot()
 
     /**
-     * Merge the breakpoint set on the column with the default
-     * breakpoints
-     */
-    if (options?.breakpoints) {
-      options.breakpoints = merge(DEFAULT_BREAKPOINTS, options.breakpoints || {})
-    } else {
-      options = {} as AttachmentOptions
-      options.breakpoints = DEFAULT_BREAKPOINTS
-    }
-
-    /**
      * Separate attachment options from the column options
      */
     const {
       disk,
       folder,
-      preComputeUrls,
-      breakpoints,
-      forceFormat,
+      preComputeUrls = false,
+      breakpoints = DEFAULT_BREAKPOINTS,
+      forceFormat = false,
       optimizeOrientation = true,
       optimizeSize = true,
       responsiveDimensions = true,

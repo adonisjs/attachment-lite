@@ -71,27 +71,30 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
    * file
    */
   public static async fromFile(file: MultipartFileContract) {
-    // Store the file locally first and add the path to the ImageInfo
-    // This will be removed after the operation is completed
-    await file.moveToDisk('image_upload_tmp')
+    if (file) {
+      // Store the file locally first and add the path to the ImageInfo
+      // This will be removed after the operation is completed
+      await file.moveToDisk('image_upload_tmp')
 
-    const attributes = {
-      extname: file.extname!,
-      mimeType: `${file.type}/${file.subtype}`,
-      size: file.size,
-      path: file.filePath,
-    }
+      const attributes = {
+        extname: file.extname!,
+        mimeType: `${file.type}/${file.subtype}`,
+        size: file.size,
+        path: file.filePath,
+      }
 
-    const responsiveAttachment = new ResponsiveAttachment(attributes)
+      const responsiveAttachment = new ResponsiveAttachment(attributes)
 
-    return responsiveAttachment
+      return responsiveAttachment
+    } else return null
   }
 
   /**
    * Create attachment instance from the database response
    */
-  public static fromDbResponse(response: any) {
-    const attributes = typeof response === 'string' ? JSON.parse(response) : response
+  public static fromDbResponse(response: string | ImageAttributes) {
+    const attributes =
+      typeof response === 'string' ? (JSON.parse(response) as ImageAttributes) : response
 
     if (!attributes) return null
 
@@ -130,19 +133,13 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
    * The generated url of the original file.
    * Available only when "isPersisted" is true.
    */
-  public url?: string
-
-  /**
-   * The generated names of the original and breakpoint files.
-   * Available only when "isPersisted" is true.
-   */
-  public names = {} as NameRecords
+  public url?: string | null
 
   /**
    * The urls of the original and breakpoint files.
    * Available only when "isPersisted" is true.
    */
-  public urls = {} as UrlRecords
+  public urls: UrlRecords | null
 
   /**
    * The image size of the original file in bytes
@@ -210,13 +207,11 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     this.height = attributes.height
     this.extname = attributes.extname
     this.mimeType = attributes.mimeType
-    this.url = attributes.url!
+    this.url = attributes.url! || null
     this.breakpoints = attributes.breakpoints || undefined
     this.path = attributes.path || ''
     this.isLocal = !!this.path
-
-    this.names = {} as NameRecords
-    this.urls = {} as UrlRecords
+    this.urls = null
   }
 
   public get attributes() {
@@ -312,11 +307,6 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     this.mimeType = enhancedImageData.mimeType
 
     /**
-     * Add name of original image to `this.names` record
-     */
-    this.names['original'] = this.name
-
-    /**
      * Inject the name into the `ImageInfo`
      */
     enhancedImageData.name = this.name
@@ -336,10 +326,6 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
        * Write the thumbnail image to the disk
        */
       await this.getDisk().put(thumbnailImageData.name!, thumbnailImageData.buffer!)
-      /**
-       * Add thumbnail name to `this.names` record
-       */
-      this.names['thumbnail'] = thumbnailImageData.name!
       /**
        * Delete buffer from `thumbnailImageData`
        */
@@ -362,10 +348,6 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
          * Write the breakpoint image to the disk
          */
         await this.getDisk().put(breakpointImageData.name!, breakpointImageData.buffer!)
-        /**
-         * Add breakpoint image name to `this.names` record
-         */
-        this.names[key] = thumbnailImageData?.name!
 
         /**
          * Delete buffer from `breakpointImageData`
@@ -399,7 +381,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     /**
      * Forcefully compute the URL
      */
-    await this.computeUrls({ forced: true })
+    await this.computeUrls()
 
     /**
      * Delete the temporary file
@@ -475,6 +457,8 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     const { path, ...originalAttributes } = this.attributes
     const attachmentData = originalAttributes
     if (attachmentData) {
+      if (!this.urls) this.urls = {} as UrlRecords
+
       for (const key in attachmentData) {
         if (['name', 'breakpoints'].includes(key) === false) continue
 
