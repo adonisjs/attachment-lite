@@ -17,9 +17,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - name: Install
-        run: npm install
+        run: yarn install
       - name: Run tests
-        run: npm test
+        run: yarn test
   windows:
     runs-on: windows-latest
     strategy:
@@ -34,6 +34,6 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - name: Install
-        run: npm install
+        run: yarn install
       - name: Run tests
-        run: npm test
+        run: yarn test
