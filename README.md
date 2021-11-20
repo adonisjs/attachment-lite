@@ -6,6 +6,9 @@
 
 ---
 
+
+[![test](https://github.com/ndianabasi/adonis-responsive-attachment/actions/workflows/test.yml/badge.svg)](https://github.com/ndianabasi/adonis-responsive-attachment/actions/workflows/test.yml)
+
 The Adonis Responsive Attachment package converts any column on your Lucid model to an image attachment data type while generating and persisting optimised responsive images from the uploaded image including the original image.
 
 Adonis Responsive Attachment generates very detailed metadata of the original file and each responsive image generated from the uploaded file and persist the metadata within the database. It does not require any additional database tables and stores the file metadata as JSON within the same column.
