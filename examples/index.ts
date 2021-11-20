@@ -1,5 +1,8 @@
 import { column, BaseModel } from '@ioc:Adonis/Lucid/Orm'
-import { attachment, ResponsiveAttachmentContract } from '@ioc:Adonis/Addons/ResponsiveAttachment'
+import {
+  responsiveAttachment,
+  ResponsiveAttachmentContract,
+} from '@ioc:Adonis/Addons/ResponsiveAttachment'
 
 export class User extends BaseModel {
   @column()
@@ -8,6 +11,6 @@ export class User extends BaseModel {
   @column()
   public email: string
 
-  @attachment()
+  @responsiveAttachment()
   public avatar: ResponsiveAttachmentContract
 }
