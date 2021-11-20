@@ -1,7 +1,7 @@
 {
   "name": "adonis-responsive-attachment",
   "version": "1.0.0",
-  "description": "Turn any field on your Lucid models to an attachment data type while automatically generating responsive formats for image files.",
+  "description": "Turn any field on your Lucid models to an image attachment data type while automatically generating responsive formats for image files.",
   "main": "build/providers/ResponsiveAttachmentProvider.js",
   "files": [
     "build/adonis-typings",
@@ -11,24 +11,26 @@
   "typings": "./build/adonis-typings/index.d.ts",
   "scripts": {
     "mrm": "mrm --preset=@adonisjs/mrm-preset",
-    "pretest": "npm run lint",
+    "pretest": "yarn lint",
     "test": "nyc node japaFile.js",
     "clean": "del build",
-    "compile": "npm run lint && npm run clean && tsc",
-    "build": "npm run compile",
-    "prepublishOnly": "npm run build",
+    "compile": "yarn lint && yarn clean && tsc",
+    "build": "yarn compile",
+    "prepublishOnly": "yarn build",
     "lint": "eslint . --ext=.ts",
     "format": "prettier --write .",
     "commit": "git-cz",
     "release": "np",
-    "version": "npm run build",
+    "version": "yarn build",
     "sync-labels": "github-label-sync --labels ./node_modules/@adonisjs/mrm-preset/gh-labels.json ndianabasi/adonis-responsive-attachment"
   },
   "keywords": [
     "adonisjs",
     "lucid",
     "attachment",
-    "attachment-lite"
+    "adonis-responsive-attachment",
+    "image-attachment",
+    "image-manipulation"
   ],
   "author": "Ndianabasi Udonkang",
   "license": "MIT",
@@ -89,9 +91,9 @@
     "sharp": "^0.29.2"
   },
   "adonisjs": {
-    "types": "@adonisjs/attachment-lite",
+    "types": "adonis-responsive-attachment",
     "providers": [
-      "@adonisjs/attachment-lite"
+      "adonis-responsive-attachment"
     ]
   },
   "publishConfig": {

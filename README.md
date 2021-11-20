@@ -17,13 +17,13 @@ This add-on only accepts image files and is a fork of the [Attachment Lite](http
 
 ## Why Use this Add-On?
 
-The ability of your application/website to serve different sizes of the same image across different devices is an important factor for improving the performance of your application/website. If your visitor is accessing your website with a mobile device who screen width is less than 500px, it is performant and data-friendly to serve that device a banner which isn't wider than 500px. On the other hand, if a visitor is accessing your website with a laptop with a minimum screen size of 1400px, it makes sense not to serve that device a banner whose width is less than 1200px so that the image does not appear pixelated.
+The ability of your application/website to serve different sizes of the same image across different devices is a important factor for improving the performance of your application/website. If your visitor is accessing your website with a mobile device whose screen width is less than 500px, it is performant and data-friendly to serve that device a banner which isn't wider than 500px. On the other hand, if a visitor is accessing your website with a laptop with a minimum screen size of 1400px, it makes sense not to serve that device a banner whose width is less than 1200px so that the image does not appear pixelated.
 
-The Adonis Responsive Attachment add-on provides the ability to generate unlimited number of responsive sizes from an uploaded and utilise the `srcset` and `sizes` attributes to serve and render different sizes of the same image to a visitor based on the size of their screen. You could get familiar with this concept by studying the [Responsive Images topic on MDN](https://developer.mozilla.org/en-US/docs/Learn/HTML/Multimedia_and_embedding/Responsive_images).
+The Adonis Responsive Attachment add-on provides the ability to generate unlimited number of responsive sizes from an uploaded image and utilise the `srcset` and `sizes` attributes to serve and render different sizes of the same image to a visitor based on the size of their screen. You should get familiar with this concept by studying the [Responsive Images topic on MDN](https://developer.mozilla.org/en-US/docs/Learn/HTML/Multimedia_and_embedding/Responsive_images).
 
 ## Use Case for this Add-On
 
-Let us assume you are developing a blog. On the article page, you need to upload a cover image. You also need to generate responsive sizes of the uploaded cover image so that you can serve different sizes to different devices based on their screen sizes. This add-on will optimise and persist the original cover image saving you up to 50% reduction is the file size. It will also generate and persist optimised responsive cover images at various breakpoints which you can customise. Additionally, for the original and responsive cover images, the add-on will generate detailed JSON metadata of the images and persist the metadata as the value for the column within the database. 
+Let us assume you are developing a blog. On the article page, you need to upload a cover image. You also need to generate responsive sizes of the uploaded cover image so that you can serve different sizes to different devices based on their screen sizes. This add-on will optimise and persist the original cover image saving you up to 50% reduction is the file size. It will also generate and persist optimised responsive cover images at various breakpoints which you can customise. Additionally, for the original and responsive cover images, the add-on will generate detailed metadata of the images and persist the metadata as the value for the column within the database. 
 
 On the frontend of your blog, you can use the `srcset` attribute of the `img` element to define and serve the different cover image sizes. You can also use the `picture` wrapper element with the `source` element to define and serve the responsive cover images.
 
@@ -65,7 +65,7 @@ node ace configure adonis-responsive-attachment
 
 ## Usage
 
-The first step is to import the `responsiveAttachment` decorator and the `ResponsiveAttachmentContract` interface from the package.
+The first step is to import the `responsiveAttachment` decorator and the `ResponsiveAttachmentContract` interface from the `adonis-responsive-attachment` package.
 
 > Make sure NOT to use the `@column` decorator when using the `@responsiveAttachment` decorator.
 
@@ -82,38 +82,38 @@ class Post extends BaseModel {
 }
 ```
 
-Now you can create an attachment from the uploaded image as follows.
+Now you can create a responsive attachment from the uploaded image as follows.
 
 ```ts
-import { Attachment } from '@ioc:Adonis/Addons/ResponsiveAttachment'
+import { ResponsiveAttachment } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 
 class PostsController {
   public store({ request }: HttpContextContract) {
     const coverImage = request.file('coverImage')!
     const post = new Post()
 
-    post.coverImage = coverImage ? await Attachment.fromFile(coverImage) : null
+    post.coverImage = coverImage ? await ResponsiveAttachment.fromFile(coverImage) : null
     await post.save()
   }
 }
 ```
 
-> You should `await` the operation `Attachment.fromFile(coverImage)` as the uploaded image is being temporarily persisted during the `fromFile` operation.
+> NOTE: You should `await` the operation `ResponsiveAttachment.fromFile(coverImage)` as the uploaded image is being temporarily persisted during the `fromFile` operation. This is a bit different from the approach of the `attachment-lite` add-on.
 
-The `Attachment.fromFile` creates an instance of the Attachment class from the uploaded file. When you persist the model to the database, the `adonis-responsive-attachment` will write the file to the disk.
+The `ResponsiveAttachment.fromFile` creates an instance of the ResponsiveAttachment class from the uploaded file. When you persist the model to the database, the `adonis-responsive-attachment` will write the file to the disk.
 
 ### Handling updates
-You can update the property with a newly uploaded cover image, and the package will take care of removing the old file and storing the new one.
+You can update the property with a newly image, and the package will take care of removing the old images and generating and persisting new responsive images.
 
 ```ts
-import { Attachment } from '@ioc:Adonis/Addons/ResponsiveAttachment'
+import { ResponsiveAttachment } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 
 class PostsController {
   public update({ request }: HttpContextContract) {
     const post = await Post.firstOrFail()
     const coverImage = request.file('coverImage')!
 
-    post.coverImage = Attachment.fromFile(coverImage)
+    post.coverImage = coverImage ? await ResponsiveAttachment.fromFile(coverImage) : null
 
     // Old file will be removed from the disk as well.
     await post.save()
@@ -127,7 +127,7 @@ Also, make sure you update the property type on the model to be `null` as well.
 
 ```ts
 class Post extends BaseModel {
-  @attachment()
+  @responsiveAttachment()
   public coverImage: ResponsiveAttachmentContract | null
 }
 ```
@@ -136,51 +136,370 @@ class Post extends BaseModel {
 const post = await Post.first()
 post.coverImage = null
 
-// Removes the file from the disk
+// Removes the original and responsive images from the disk
 await post.save()
 ```
 
 ### Handling deletes
-Upon deleting the model instance, all the related attachments will be removed from the disk.
+Upon deleting the model instance, all the related original and responsive images will be removed from the disk.
 
 > Do note: For attachment lite to delete files, you will have to use the `modelInstance.delete` method. Using `delete` on the query builder will not work.
 
 ```ts
 const post = await Post.first()
 
-// Removes any attachments related to this post
+// Removes any image attachments related to this post
 await post.delete()
 ```
 
-## Specifying disk
-By default, all files are written/deleted from the default disk. However, you can specify a custom disk at the time of using the `attachment` decorator.
+## The `responsiveAttachment` Decorator Options
+
+The `responsiveAttachment` decorator accepts the following options:
+
+1. `disk` - string,
+2. `folder` - string,
+3. `breakpoints` - object,
+4. `forceFormat` - "jpeg" | "png" | "webp" | "tiff" | "avif",
+5. `optimizeSize` - boolean,
+6. `optimizeOrientation` - boolean,
+7. `responsiveDimensions` - boolean,
+8. `preComputeUrls` - boolean.
+
+Let's discuss these options
+
+### 1. Specifying disk with the `disk` option
+
+By default, all images are written/deleted from the default disk. However, you can specify a custom disk at the time of using the `responsiveAttachment` decorator.
 
 > The `disk` property value is never persisted to the database. It means, if you first define the disk as `s3`, upload a few files and then change the disk value to `gcs`, the package will look for files using the `gcs` disk.
 
 ```ts
 class Post extends BaseModel {
-  @attachment({ disk: 's3' })
+  @responsiveAttachment({ disk: 's3' })
   public coverImage: ResponsiveAttachmentContract
 }
 ```
 
-## Specifying subfolder
+### 2. Specifying the Folder with the `folder` option
 
 You can also store files inside the subfolder by defining the `folder` property as follows.
 
 ```ts
+class Page extends BaseModel {
+  @responsiveAttachment({ folder: 'cover-images/pages' })
+  public coverImage: ResponsiveAttachmentContract
+}
+
+// or
 class Post extends BaseModel {
-  @attachment({ folder: 'avatars' })
+  @responsiveAttachment({ folder: 'cover-images/posts' })
   public coverImage: ResponsiveAttachmentContract
 }
 ```
 
-## Generating URLs
+### 3. The `breakpoints` 
 
-You can generate a URL for a given attachment using the `getUrl` or `getSignedUrl` methods. They are identical to the [Drive methods](https://docs.adonisjs.com/guides/drive#generating-urls), just that you don't have to specify the file name.
+The `breakpoints` option accepts an object which contains the definition for the breakpoints for the generation of responsive images. By default, it has the following value:
 
 ```ts
-await post.coverImage.getSignedUrl({ expiresIn: '30mins' })
+{
+  large: 1000,
+  medium: 750,
+  small: 500,
+}
+```
+
+With the above default values, the `adonis-responsive-attachment` add-on will generate three (3) responsive images whose widths are exactly `1000px`, `750px`, and `500px`. 
+
+In addition, the `adonis-responsive-attachment` add-on will generate a thumbnail width the following resize options:
+
+```ts
+{
+  width: 245,
+  height: 156,
+  fit: 'inside' as sharp.FitEnum['inside'],
+}
+```
+
+This means that if the width of the original image is greater than `245px` or the height of th original image is greater than `156px`, a thumbnail will be generated with the `inside` fit type. Learn more [here](https://sharp.pixelplumbing.com/api-resize#resize).
+
+If you need to customise the `breakpoints` options, you need to overwrite the default properties `large`, `medium`, and `small` with your own values. You can also add new properties to the default ones.
+
+```ts
+class Post extends BaseModel {
+  @responsiveAttachment({
+  xlarge: 1400,
+  large: 1050, // Make you overwrite `large`
+  medium: 800, // Make you overwrite `medium`
+  small: 550, // Make you overwrite `small`
+}
+)
+  public coverImage: ResponsiveAttachmentContract
+}
+
+const post = await Post.findOrFail(1)
+post.coverImage.name // exists
+post.coverImage.breakpoints.thumbnail.name // exists
+post.coverImage.breakpoints.small.name // exists
+post.coverImage.breakpoints.medium.name // exists
+post.coverImage.breakpoints.large.name // exists
+post.coverImage.breakpoints.xlarge.name // extra breakpoint exists
+```
+
+### 4. The `forceFormat` Option
+
+The `forceFormat` option is used to change the image from one format to another. By default, the `adonis-responsive-attachment` will maintain the format of the uploaded image when persisting the original image and generating the responsive images. However, assuming you want to force the conversion of all supported formats to the `webp` format, you can do:
+
+```ts
+class Post extends BaseModel {
+  @responsiveAttachment({forcedFormat: 'webp'})
+  public coverImage: ResponsiveAttachmentContract
+}
+```
+
+This will persist the original image and generated responsive images in the `webp` format.
+
+### 5. The `optimizeSize` Option
+
+The `optimizeSize` option enables the optimisation of the uploaded image and then use the optimised version of the uploaded image to persist the original image and generate the responsive images. By default, this is set to `true`. However, you can disable this behaviour by setting `optimizeSize` to `false`:
+
+```ts
+class Post extends BaseModel {
+  @responsiveAttachment({optimizeSize: false})
+  public coverImage: ResponsiveAttachmentContract
+}
+```
+
+### 6. The `optimizeOrientation` Option
+
+The `optimizeOrientation` option ensures that the orientation of the uploaded image is corrected through `auto-rotation` if the add-on detects that the orientation is not correct. This option is set to `true` by default but you can disable this behaviour by setting `optimizeOrientation` to `false`:
+
+```ts
+class Post extends BaseModel {
+  @responsiveAttachment({optimizeOrientation: false})
+  public coverImage: ResponsiveAttachmentContract
+}
+
+const post = await Post.findOrFail(1)
+post.coverImage.name // exists
+post.coverImage.breakpoints // undefined
+```
+
+### 7. The `responsiveDimensions` Option
+
+The `responsiveDimensions` option allows the generation of the thumbnail and responsive images from the uploaded image. This option is set to `true` by default but if you do not need to generate responsive images, you can disable this behaviour by setting `responsiveDimensions` to `false`:
+
+```ts
+class Post extends BaseModel {
+  @responsiveAttachment({responsiveDimensions: false})
+  public coverImage: ResponsiveAttachmentContract
+}
+```
+
+### 8. The `preComputeUrls` Option
+
+Read more about this option in this section: [Using the preComputeUrls Option](#using-the-precomputeurls-option).
+
+## Generating URLs
+
+By default, the `adonis-responsive-attachment`, will not generate the URLs of the original and responsive images to the JSON metadata which is persisted to the database. This helps reduce the size of the JSON. The same of the JSON will look as shown below. Notice that the root `url` property (which is the URL of the original image) is null while the `url` property is missing in the metadata of the breakpoint images.
+
+```js
+{
+  name: 'original_ckw5lpv7v0002egvobe1b0oav.jpg',
+  size: 291.69,
+  hash: 'ckw5lpv7v0002egvobe1b0oav',
+  width: 1500,
+  format: 'jpeg',
+  height: 1000,
+  extname: 'jpg',
+  mimeType: 'image/jpeg',
+  url: null,
+  breakpoints: {
+    thumbnail: {
+      name: 'thumbnail_ckw5lpv7v0002egvobe1b0oav.jpg',
+      hash: 'ckw5lpv7v0002egvobe1b0oav',
+      extname: 'jpg',
+      mimeType: 'image/jpeg',
+      width: 234,
+      height: 156,
+      size: 7.96,
+    },
+    large: {
+      name: 'large_ckw5lpv7v0002egvobe1b0oav.jpg',
+      hash: 'ckw5lpv7v0002egvobe1b0oav',
+      extname: 'jpg',
+      mimeType: 'image/jpeg',
+      width: 1000,
+      height: 667,
+      size: 129.15,
+    },
+    medium: {
+      name: 'medium_ckw5lpv7v0002egvobe1b0oav.jpg',
+      hash: 'ckw5lpv7v0002egvobe1b0oav',
+      extname: 'jpg',
+      mimeType: 'image/jpeg',
+      width: 750,
+      height: 500,
+      size: 71.65,
+    },
+    small: {
+      name: 'small_ckw5lpv7v0002egvobe1b0oav.jpg',
+      hash: 'ckw5lpv7v0002egvobe1b0oav',
+      extname: 'jpg',
+      mimeType: 'image/jpeg',
+      width: 500,
+      height: 333,
+      size: 32.21,
+    },
+  },
+}
+```
+
+If you want to enable the automatic generation of the URLs of the original and responsive images, you have two options:
+
+1. Set `preComputeUrls` option to `true` in the `responsiveAttachment` decorator,
+2. Call the `ResponsiveAttachment.getUrls` method.
+
+### Using the `preComputeUrls` Option
+
+The `preComputeUrls` option when enabled (i.e. set to `true`) will pre-compute the URLs of the original and responsive images when you `find`, `fetch`, or `paginate` the model which the responsive attachment is defined within. For example:
+
+```ts
+class Post extends BaseModel {
+  @responsiveAttachment({ preComputeUrls: true })
+  public coverImage: ResponsiveAttachmentContract
+}
+```
+
+#### During a `Fetch` result
+
+```ts
+const posts = await Post.all()
+posts[0].coverImage.url // pre-computed
+posts[0].coverImage.breakpoints.thumbnail.url // pre-computed
+posts[0].coverImage.breakpoints.small.url // pre-computed
+posts[0].coverImage.breakpoints.medium.url // pre-computed
+posts[0].coverImage.breakpoints.large.url // pre-computed
+posts[0].coverImage.urls // pre-computed
+```
+
+#### During a `Find` result
+
+```ts
+const post = await Post.findOrFail(1)
+post.coverImage.url // pre-computed
+post.coverImage.breakpoints.thumbnail.url // pre-computed
+post.coverImage.breakpoints.small.url // pre-computed
+post.coverImage.breakpoints.medium.url // pre-computed
+post.coverImage.breakpoints.large.url // pre-computed
+posts.coverImage.urls // pre-computed
+```
+
+#### During a `Pagination` result
+
+```ts
+const posts = await Post.query.paginate(1)
+posts[0].coverImage.url // pre-computed
+posts[0].coverImage.breakpoints.thumbnail.url // pre-computed
+posts[0].coverImage.breakpoints.small.url // pre-computed
+posts[0].coverImage.breakpoints.medium.url // pre-computed
+posts[0].coverImage.breakpoints.large.url // pre-computed
+posts[0].coverImage.urls // pre-computed
+```
+
+The `preComputeUrl` property will generate the URLs and set it on the ResponsiveAttachment class instance. Also, a signed URL is generated when the disk is **private**, and a normal URL is generated when the disk is **public**.
+
+Pre-computation stores a JSON with `url` properties for the original and responsive images to the database. Typically, the JSON will look like this:
+
+```ts
+{
+  name: 'original_ckw5lpv7v0002egvobe1b0oav.jpg',
+  size: 291.69,
+  hash: 'ckw5lpv7v0002egvobe1b0oav',
+  width: 1500,
+  format: 'jpeg',
+  height: 1000,
+  extname: 'jpg',
+  mimeType: 'image/jpeg',
+  url: '/uploads/original_ckw5lpv7v0002egvobe1b0oav.jpg?signature=eyJtZXNzYWdlIjoiL3VwbG9hZHMvb3JpZ2luYWxfY2t3NWxwdjd2MDAwMmVndm9iZTFiMG9hdi5qcGcifQ.ieXMlaRb8izlREvJ0E9iMY0I3iedalmv-pvOUIrfEZc',
+  breakpoints: {
+    thumbnail: {
+      name: 'thumbnail_ckw5lpv7v0002egvobe1b0oav.jpg',
+      hash: 'ckw5lpv7v0002egvobe1b0oav',
+      extname: 'jpg',
+      mimeType: 'image/jpeg',
+      width: 234,
+      height: 156,
+      size: 7.96,
+      url: '/uploads/thumbnail_ckw5lpv7v0002egvobe1b0oav.jpg?signature=eyJtZXNzYWdlIjoiL3VwbG9hZHMvdGh1bWJuYWlsX2NrdzVscHY3djAwMDJlZ3ZvYmUxYjBvYXYuanBnIn0.RGGimHh6NuyPrB2ZgmudE7rH4RRCT3NL7kex9EmSyIo',
+    },
+    large: {
+      name: 'large_ckw5lpv7v0002egvobe1b0oav.jpg',
+      hash: 'ckw5lpv7v0002egvobe1b0oav',
+      extname: 'jpg',
+      mimeType: 'image/jpeg',
+      width: 1000,
+      height: 667,
+      size: 129.15,
+      url: '/uploads/large_ckw5lpv7v0002egvobe1b0oav.jpg?signature=eyJtZXNzYWdlIjoiL3VwbG9hZHMvbGFyZ2VfY2t3NWxwdjd2MDAwMmVndm9iZTFiMG9hdi5qcGcifQ.eNC8DaqYCYd4khKhqS7DKI66SsLpD-vyVIaP8rzMmAA',
+    },
+    medium: {
+      name: 'medium_ckw5lpv7v0002egvobe1b0oav.jpg',
+      hash: 'ckw5lpv7v0002egvobe1b0oav',
+      extname: 'jpg',
+      mimeType: 'image/jpeg',
+      width: 750,
+      height: 500,
+      size: 71.65,
+      url: '/uploads/medium_ckw5lpv7v0002egvobe1b0oav.jpg?signature=eyJtZXNzYWdlIjoiL3VwbG9hZHMvbWVkaXVtX2NrdzVscHY3djAwMDJlZ3ZvYmUxYjBvYXYuanBnIn0.2ADmssxFC0vxmq4gJEgjb9Fxo1qcQ6tMVeKBqZ1ENkM',
+    },
+    small: {
+      name: 'small_ckw5lpv7v0002egvobe1b0oav.jpg',
+      hash: 'ckw5lpv7v0002egvobe1b0oav',
+      extname: 'jpg',
+      mimeType: 'image/jpeg',
+      width: 500,
+      height: 333,
+      size: 32.21,
+      url: '/uploads/small_ckw5lpv7v0002egvobe1b0oav.jpg?signature=eyJtZXNzYWdlIjoiL3VwbG9hZHMvc21hbGxfY2t3NWxwdjd2MDAwMmVndm9iZTFiMG9hdi5qcGcifQ.I8fwMRwY5azvlS_8B0K40BWKQNLuS-HqCB_3RXryOok',
+    },
+  },
+}
+```
+
+### Using the `ResponsiveAttachment.getUrls` Method
+
+If you manually generate signed or un-signed URLs for a given image attachment using the `getUrls` method. This method calls the `ResponsiveAttachment.preComputeUrls` method internally to compute the URLs of original and responsive images and returns the result as an object containing the various URLs. It also adds the URLs to the `this.url` and `this.breakpoints` properties so that you can access the URLs normally when you serialise the result as JSON.
+
+```ts
+// For unsigned URLs, do not pass in any options
+await post.coverImage.getUrls()
+// After
+post.coverImage.url // computed
+post.coverImage.breakpoints.thumbnail.url // computed
+post.coverImage.breakpoints.small.url // computed
+post.coverImage.breakpoints.medium.url // computed
+post.coverImage.breakpoints.large.url // computed
+posts.coverImage.urls // computed
+```
+
+```ts
+// For signed URLs, you can pass in signing options.
+// See the options at: https://docs.adonisjs.com/guides/drive#getsignedurl
+await post.coverImage.getUrls({ expiresIn: '30mins' })
+// or
+await post.coverImage.getUrls({
+  contentType: 'application/json',
+  contentDisposition: 'attachment',
+})
+// After
+post.coverImage.url // computed as a signed URL
+post.coverImage.breakpoints.thumbnail.url // computed as a signed URL
+post.coverImage.breakpoints.small.url // computed as a signed URL
+post.coverImage.breakpoints.medium.url // computed as a signed URL
+post.coverImage.breakpoints.large.url // computed as a signed URL
+posts.coverImage.urls // computed as an object containing all signed URLs
 ```
 
 ## Generating URLs for the API response
@@ -192,50 +511,16 @@ The Drive API methods for generating URLs are asynchronous, whereas serializing 
 
 const users = await Post.all()
 users.map((post) => {
-  post.coverImage.url = await post.coverImage.getSignedUrl()
+  post.coverImage.url = await post.coverImage.getUrls()
   return post
 })
 ```
 
 To address this use case, you can opt for pre-computing URLs
 
-### Pre compute URLs
+### Pre-Compute URLs on Demand
 
-Enable the `preComputeUrl` flag to pre compute the URLs after SELECT queries. For example:
-
-```ts
-class Post extends BaseModel {
-  @attachment({ preComputeUrl: true })
-  public coverImage: ResponsiveAttachmentContract
-}
-```
-
-Fetch result
-
-```ts
-const users = await Post.all()
-users[0].coverImage.url // pre computed already 
-```
-
-Find result
-
-```ts
-const post = await Post.findOrFail(1)
-post.coverImage.url // pre computed already 
-```
-
-Pagination result
-
-```ts
-const users = await Post.query.paginate(1)
-users[0].coverImage.url // pre computed already 
-```
-
-The `preComputeUrl` property will generate the URL and set it on the Attachment class instance. Also, a signed URL is generated when the disk is **private**, and a normal URL is generated when the disk is **public**.
-
-### Pre compute on demand
-
-We recommend not enabling the `preComputeUrl` option when you need the URL for just one or two queries and not within the rest of your application.
+We recommend not enabling the `preComputeUrls` option when you need the URLs for just one or two queries and not within the rest of your application.
 
 For those couple of queries, you can manually compute the URLs within the controller. Here's a small helper method that you can drop on the model directly.
 
@@ -247,19 +532,19 @@ class Post extends BaseModel {
       return
     }
 
-    await models.coverImage?.computeUrl()
-    await models.coverImage?.computeUrl()
+    await models.avatar?.computeUrls()
+    await models.coverImage?.computeUrls()
   }
 }
 ```
 
 And now use it as follows.
 
-```
-const users = await Post.all()
-await Post.preComputeUrls(users)
+```ts
+const posts = await Post.all()
+await Post.preComputeUrls(posts)
 
-return users
+return posts
 ```
 
 Or for a single post
