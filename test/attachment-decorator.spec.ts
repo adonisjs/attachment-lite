@@ -873,7 +873,7 @@ test.group('@responsiveAttachment | resetToNull', (group) => {
     assert.notExists(firstResponse.avatar.breakpoints!.thumbnail.url)
   })
 
-  test('do not remove old file when resetting to null fails', async (assert) => {
+  test.only('do not remove old file when resetting to null fails', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -920,6 +920,7 @@ test.group('@responsiveAttachment | resetToNull', (group) => {
     assert.instanceOf(users[0].avatar, ResponsiveAttachment)
 
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
+    console.log(firstResponse.avatar)
 
     assert.isTrue(await Drive.exists(firstResponse.avatar.name!))
     assert.isTrue(await Drive.exists(firstResponse.avatar.breakpoints!.large.name))
