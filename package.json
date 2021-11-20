@@ -30,7 +30,8 @@
     "attachment",
     "adonis-responsive-attachment",
     "image-attachment",
-    "image-manipulation"
+    "image-manipulation",
+    "responsive-images"
   ],
   "author": "Ndianabasi Udonkang",
   "license": "MIT",
@@ -78,12 +79,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/adonisjs/attachment-lite.git"
+    "url": "git+https://github.com/ndianabasi/adonis-responsive-attachment.git"
   },
   "bugs": {
-    "url": "https://github.com/adonisjs/attachment-lite/issues"
+    "url": "https://github.com/ndianabasi/adonis-responsive-attachment/issues"
   },
-  "homepage": "https://github.com/adonisjs/attachment-lite#readme",
+  "homepage": "https://github.com/ndianabasi/adonis-responsive-attachment#readme",
   "dependencies": {
     "@poppinss/utils": "^3.2.1",
     "lodash": "^4.17.21",
