@@ -9,6 +9,21 @@ import {
 } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 import { cuid } from '@poppinss/utils/build/helpers'
 import _ from 'lodash'
+import { DEFAULT_BREAKPOINTS } from '../Attachment/decorator'
+
+const getMergedOptions = function (options: AttachmentOptions): AttachmentOptions {
+  return _.merge(
+    {
+      preComputeUrls: false,
+      breakpoints: DEFAULT_BREAKPOINTS,
+      forceFormat: undefined,
+      optimizeOrientation: true,
+      optimizeSize: true,
+      responsiveDimensions: true,
+    },
+    options
+  )
+}
 
 export const bytesToKBytes = (bytes: number) => Math.round((bytes / 1000) * 100) / 100
 
@@ -46,7 +61,13 @@ export const resizeTo = async function (
 export const breakpointSmallerThan = (breakpoint: number, { width, height }: FileDimensions) =>
   breakpoint < width! || breakpoint < height!
 
-export const allowedFormats: Array<AttachmentOptions['forceFormat']> = ['jpeg', 'png', 'webp']
+export const allowedFormats: Array<AttachmentOptions['forceFormat']> = [
+  'jpeg',
+  'png',
+  'webp',
+  'avif',
+  'tiff',
+]
 
 export const canBeProcessed = async (buffer: Buffer) => {
   const { format } = await getMetaData(buffer)
@@ -132,7 +153,7 @@ export const optimize = async function (
   buffer: Buffer,
   options?: AttachmentOptions
 ): Promise<OptimizedOutput> {
-  const { optimizeOrientation, optimizeSize, forceFormat } = options!
+  const { optimizeOrientation, optimizeSize, forceFormat } = options || {}
 
   // Check if the image is in the right format or can be size optimised
   if (!optimizeSize || !(await canBeProcessed(buffer))) {
@@ -170,9 +191,13 @@ export const generateThumbnail = async function (
   imageData: ImageInfo,
   options: AttachmentOptions
 ): Promise<ImageInfo | null> {
+  options = getMergedOptions(options)
+
   if (!(await canBeProcessed(imageData.buffer!))) {
     return null
   }
+
+  if (!options?.responsiveDimensions) return null
 
   const { width, height } = await getDimensions(imageData.buffer!)
 
@@ -218,6 +243,7 @@ export const generateBreakpointImages = async function (
   imageData: ImageInfo,
   options: AttachmentOptions
 ) {
+  options = getMergedOptions(options)
   /**
    * Noop if `responsiveDimensions` is falsy
    */
@@ -233,7 +259,7 @@ export const generateBreakpointImages = async function (
   const originalDimensions: FileDimensions = await getDimensions(imageData.buffer!)
 
   return Promise.all(
-    Object.keys(options.breakpoints!)?.map((key) => {
+    Object.keys(options.breakpoints ?? {})?.map((key) => {
       const breakpointValue = options.breakpoints?.[key] as number
 
       const isBreakpointSmallerThanOriginal = breakpointSmallerThan(

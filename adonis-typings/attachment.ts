@@ -147,15 +147,10 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
     }): Promise<void>
 
     /**
-     * Returns the URL for the file. Same as "Drive.getUrl()"
+     * Returns the signed or unsigned URL for each responsive image
      */
-    getUrls(): Promise<UrlRecords | null>
-
-    /**
-     * Returns the signed URLs and `ImageAttributes` for each responsive image
-     */
-    getSignedUrls(
-      options?: ContentHeaders & { expiresIn?: string | number }
+    getUrls(
+      signingOptions?: ContentHeaders & { expiresIn?: string | number }
     ): Promise<UrlRecords | null>
 
     /**

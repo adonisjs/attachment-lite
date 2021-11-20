@@ -19,7 +19,6 @@ import type {
   AttachmentConstructorContract,
   ImageInfo,
   UrlRecords,
-  NameRecords,
   ImageBreakpoints,
   ImageAttributes,
 } from '@ioc:Adonis/Addons/ResponsiveAttachment'
@@ -32,6 +31,7 @@ import {
 } from '../Helpers/ImageManipulationHelper'
 import _ from 'lodash'
 import cuid from 'cuid'
+import { DEFAULT_BREAKPOINTS } from './decorator'
 
 const REQUIRED_ATTRIBUTES = [
   'name',
@@ -249,7 +249,17 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
    * Define persistance options
    */
   public setOptions(options?: AttachmentOptions) {
-    this.options = options
+    this.options = _.merge(
+      {
+        preComputeUrls: false,
+        breakpoints: DEFAULT_BREAKPOINTS,
+        forceFormat: undefined,
+        optimizeOrientation: true,
+        optimizeSize: true,
+        responsiveDimensions: true,
+      },
+      options
+    )
     return this
   }
 
@@ -447,7 +457,16 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
      * Generate url using the user defined preComputeUrls method
      */
     if (typeof this.options?.preComputeUrls === 'function') {
-      this.urls = await this.options.preComputeUrls(disk, this)
+      const urls = await this.options.preComputeUrls(disk, this)
+      this.url = urls.url
+      if (!this.urls) this.urls = {} as UrlRecords
+      if (!this.urls.breakpoints) this.urls.breakpoints = {} as ImageBreakpoints
+      for (const key in urls.breakpoints) {
+        if (Object.prototype.hasOwnProperty.call(urls.breakpoints, key)) {
+          if (!this.urls.breakpoints[key]) this.urls.breakpoints[key] = { url: '' }
+          this.urls.breakpoints[key].url = urls.breakpoints[key].url
+        }
+      }
       return
     }
 
@@ -473,23 +492,26 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
             url = await disk.getUrl(name)
           }
           this.urls['url'] = url
+          this.url = url
         } else if (key === 'breakpoints') {
-          if (!this.urls.breakpoints) this.urls.breakpoints = {} as ImageBreakpoints
+          if (_.isEmpty(value) !== true) {
+            if (!this.urls.breakpoints) this.urls.breakpoints = {} as ImageBreakpoints
 
-          for (const breakpoint in value) {
-            if (Object.prototype.hasOwnProperty.call(value, breakpoint)) {
-              const breakpointImageData: Exclude<ImageInfo, 'breakpoints'> = value?.[breakpoint]
-              if (breakpointImageData) {
-                const imageVisibility = await disk.getVisibility(breakpointImageData.name!)
-                if (imageVisibility === 'private') {
-                  url = await disk.getSignedUrl(
-                    breakpointImageData.name!,
-                    signedUrlOptions || undefined
-                  )
-                } else {
-                  url = await disk.getUrl(breakpointImageData.name!)
+            for (const breakpoint in value) {
+              if (Object.prototype.hasOwnProperty.call(value, breakpoint)) {
+                const breakpointImageData: Exclude<ImageInfo, 'breakpoints'> = value?.[breakpoint]
+                if (breakpointImageData) {
+                  const imageVisibility = await disk.getVisibility(breakpointImageData.name!)
+                  if (imageVisibility === 'private') {
+                    url = await disk.getSignedUrl(
+                      breakpointImageData.name!,
+                      signedUrlOptions || undefined
+                    )
+                  } else {
+                    url = await disk.getUrl(breakpointImageData.name!)
+                  }
+                  this.urls['breakpoints'][breakpoint] = { url }
                 }
-                this.urls['breakpoints'][breakpoint] = { url }
               }
             }
           }
@@ -499,24 +521,13 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
   }
 
   /**
-   * Returns the URLs for the breakpoint images.
+   * Returns the signed or unsigned URL for each responsive image
    */
-  public async getUrls() {
-    /**
-     * Compute the URLs first
-     */
-    this.computeUrls({ forced: true })
-    return this.urls
-  }
-
-  /**
-   * Returns the signed URLs for the image
-   */
-  public async getSignedUrls(options?: ContentHeaders & { expiresIn?: string | number }) {
+  public async getUrls(signingOptions?: ContentHeaders & { expiresIn?: string | number }) {
     /**
      * Forcefully compute the URLs first
      */
-    this.computeUrls({ forced: true, ...options })
+    await this.computeUrls({ forced: true, ...signingOptions })
     return this.urls
   }
 

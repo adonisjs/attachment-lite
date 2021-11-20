@@ -21,7 +21,7 @@ import { ResponsiveAttachment } from './index'
 /**
  * Default breakpoint options
  */
-const DEFAULT_BREAKPOINTS = {
+export const DEFAULT_BREAKPOINTS = {
   large: 1000,
   medium: 750,
   small: 500,
@@ -220,7 +220,7 @@ export const responsiveAttachment: ResponsiveAttachmentDecorator = (options) => 
       folder,
       preComputeUrls = false,
       breakpoints = DEFAULT_BREAKPOINTS,
-      forceFormat = false,
+      forceFormat,
       optimizeOrientation = true,
       optimizeSize = true,
       responsiveDimensions = true,
