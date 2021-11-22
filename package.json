@@ -11,17 +11,17 @@
   "typings": "./build/adonis-typings/index.d.ts",
   "scripts": {
     "mrm": "mrm --preset=@adonisjs/mrm-preset",
-    "pretest": "yarn lint",
+    "pretest": "npm run lint",
     "test": "nyc node japaFile.js",
     "clean": "del build",
-    "compile": "yarn lint && yarn clean && tsc",
-    "build": "yarn compile",
-    "prepublishOnly": "yarn build",
+    "compile": "npm run lint && npm run clean && tsc",
+    "build": "npm run compile",
+    "prepublishOnly": "npm run build",
     "lint": "eslint . --ext=.ts",
     "format": "prettier --write .",
     "commit": "git-cz",
     "release": "np",
-    "version": "yarn build",
+    "version": "npm run build",
     "sync-labels": "github-label-sync --labels ./node_modules/@adonisjs/mrm-preset/gh-labels.json ndianabasi/adonis-responsive-attachment"
   },
   "keywords": [
