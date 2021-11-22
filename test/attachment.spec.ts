@@ -712,6 +712,177 @@ test.group(
   }
 )
 
+test.group('Do not generate thumbnail images when `options.disableThumbnail` is true', (group) => {
+  group.before(async () => {
+    app = await setupApplication()
+    await setup(app)
+
+    app.container.resolveBinding('Adonis/Core/Route').commit()
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+  })
+
+  group.after(async () => {
+    await cleanup(app)
+  })
+
+  test('create attachment from the user uploaded image', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const file = ctx.request.file('avatar')!
+        const responsiveAttachment = await ResponsiveAttachment.fromFile(file)
+        responsiveAttachment?.setOptions({ disableThumbnail: true })
+        await responsiveAttachment?.save()
+
+        assert.isTrue(responsiveAttachment?.isPersisted)
+        assert.isTrue(responsiveAttachment?.isLocal)
+
+        assert.isTrue(await Drive.exists(responsiveAttachment?.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.small.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.medium.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.large.name!))
+
+        assert.isUndefined(responsiveAttachment?.breakpoints?.thumbnail)
+
+        ctx.response.send(responsiveAttachment)
+        ctx.response.finish()
+      })
+    })
+
+    await supertest(server)
+      .post('/')
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+  })
+
+  test('pre-compute urls for newly created images', async (assert) => {
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const file = ctx.request.file('avatar')!
+        const responsiveAttachment = await ResponsiveAttachment.fromFile(file)
+        responsiveAttachment?.setOptions({ preComputeUrls: true, disableThumbnail: true })
+        await responsiveAttachment?.save()
+
+        assert.isTrue(responsiveAttachment?.isPersisted)
+        assert.isTrue(responsiveAttachment?.isLocal)
+
+        assert.isNotEmpty(responsiveAttachment?.urls)
+
+        assert.isDefined(responsiveAttachment?.url)
+        assert.isNotNull(responsiveAttachment?.url)
+        assert.isDefined(responsiveAttachment?.url!)
+        assert.isDefined(responsiveAttachment?.url!)
+        assert.isDefined(responsiveAttachment?.breakpoints?.small.url!)
+        assert.isNotNull(responsiveAttachment?.breakpoints?.small.url!)
+        assert.isDefined(responsiveAttachment?.breakpoints?.medium.url!)
+        assert.isNotNull(responsiveAttachment?.breakpoints?.medium.url!)
+        assert.isDefined(responsiveAttachment?.breakpoints?.large.url!)
+        assert.isNotNull(responsiveAttachment?.breakpoints?.large.url!)
+
+        assert.isUndefined(responsiveAttachment?.breakpoints?.thumbnail)
+
+        ctx.response.send(responsiveAttachment)
+        ctx.response.finish()
+      })
+    })
+
+    await supertest(server)
+      .post('/')
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+  })
+})
+
+test.group('Do not generate responsive images when some default breakpoints are `off`', (group) => {
+  group.before(async () => {
+    app = await setupApplication()
+    await setup(app)
+
+    app.container.resolveBinding('Adonis/Core/Route').commit()
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+  })
+
+  group.after(async () => {
+    await cleanup(app)
+  })
+
+  test('create attachment from the user uploaded image', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const file = ctx.request.file('avatar')!
+        const responsiveAttachment = await ResponsiveAttachment.fromFile(file)
+        responsiveAttachment?.setOptions({
+          breakpoints: { medium: 'off', small: 'off' },
+        })
+        await responsiveAttachment?.save()
+
+        assert.isTrue(responsiveAttachment?.isPersisted)
+        assert.isTrue(responsiveAttachment?.isLocal)
+
+        assert.isTrue(await Drive.exists(responsiveAttachment?.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.large.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.thumbnail.name!))
+
+        assert.isUndefined(responsiveAttachment?.breakpoints?.medium)
+        assert.isUndefined(responsiveAttachment?.breakpoints?.small)
+
+        assert.isTrue(
+          responsiveAttachment?.breakpoints!.thumbnail.size! <
+            responsiveAttachment?.breakpoints!.large.size!
+        )
+        assert.isTrue(responsiveAttachment?.breakpoints!.large.size! < responsiveAttachment?.size!)
+
+        ctx.response.send(responsiveAttachment)
+        ctx.response.finish()
+      })
+    })
+
+    await supertest(server)
+      .post('/')
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+  })
+
+  test('pre-compute urls for newly created images', async (assert) => {
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const file = ctx.request.file('avatar')!
+        const responsiveAttachment = await ResponsiveAttachment.fromFile(file)
+        responsiveAttachment?.setOptions({
+          preComputeUrls: true,
+          breakpoints: { medium: 'off', small: 'off' },
+        })
+        await responsiveAttachment?.save()
+
+        assert.isTrue(responsiveAttachment?.isPersisted)
+        assert.isTrue(responsiveAttachment?.isLocal)
+
+        assert.isNotEmpty(responsiveAttachment?.urls)
+
+        assert.isDefined(responsiveAttachment?.url)
+        assert.isNotNull(responsiveAttachment?.url)
+        assert.isDefined(responsiveAttachment?.breakpoints?.large.url!)
+        assert.isDefined(responsiveAttachment?.breakpoints?.thumbnail.url!)
+        assert.isNotNull(responsiveAttachment?.breakpoints?.large.url!)
+        assert.isNotNull(responsiveAttachment?.breakpoints?.thumbnail.url!)
+
+        ctx.response.send(responsiveAttachment)
+        ctx.response.finish()
+      })
+    })
+
+    await supertest(server)
+      .post('/')
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+  })
+})
+
 test.group('Manual generation of URLs', (group) => {
   group.before(async () => {
     app = await setupApplication()
@@ -725,12 +896,13 @@ test.group('Manual generation of URLs', (group) => {
     await cleanup(app)
   })
 
-  test('generate URLs of the images', async (assert) => {
+  test('generate URLs for the images', async (assert) => {
     const server = createServer((req, res) => {
       const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
       app.container.make(BodyParserMiddleware).handle(ctx, async () => {
         const file = ctx.request.file('avatar')!
         const responsiveAttachment = await ResponsiveAttachment.fromFile(file)
+        responsiveAttachment?.setOptions(undefined)
         await responsiveAttachment?.save()
         const urls = await responsiveAttachment?.getUrls()
 
@@ -738,28 +910,149 @@ test.group('Manual generation of URLs', (group) => {
         assert.isTrue(responsiveAttachment?.isLocal)
 
         assert.match(urls?.url!, /^\/uploads\/original.+\?signature=.+$/)
-        assert.match(urls?.breakpoints?.thumbnail.url!, /^\/uploads\/thumbnail.+\?signature=.+$/)
-        assert.match(urls?.breakpoints?.small.url!, /^\/uploads\/small.+\?signature=.+$/)
-        assert.match(urls?.breakpoints?.large.url!, /^\/uploads\/large.+\?signature=.+$/)
-        assert.match(urls?.breakpoints?.medium.url!, /^\/uploads\/medium.+\?signature=.+$/)
 
-        assert.match(responsiveAttachment?.urls?.url!, /^\/uploads\/original.+\?signature=.+$/)
-        assert.match(
-          responsiveAttachment?.urls?.breakpoints?.thumbnail.url!,
-          /^\/uploads\/thumbnail.+\?signature=.+$/
+        ctx.response.send(responsiveAttachment)
+        ctx.response.finish()
+      })
+    })
+
+    await supertest(server)
+      .post('/')
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+  })
+})
+
+test.group('Error checks', (group) => {
+  group.before(async () => {
+    app = await setupApplication()
+    await setup(app)
+
+    app.container.resolveBinding('Adonis/Core/Route').commit()
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+  })
+
+  group.after(async () => {
+    await cleanup(app)
+  })
+})
+
+test.group('ResponsiveAttachment | Custom breakpoints', (group) => {
+  group.before(async () => {
+    app = await setupApplication()
+    await setup(app)
+
+    app.container.resolveBinding('Adonis/Core/Route').commit()
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+  })
+
+  group.after(async () => {
+    await cleanup(app)
+  })
+
+  test('create attachment from the user uploaded image', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const file = ctx.request.file('avatar')!
+        const responsiveAttachment = await ResponsiveAttachment.fromFile(file)
+        responsiveAttachment?.setOptions({
+          breakpoints: { small: 400, medium: 700, large: 1000, xlarge: 1200 },
+        })
+        await responsiveAttachment?.save()
+
+        assert.isTrue(responsiveAttachment?.isPersisted)
+        assert.isTrue(responsiveAttachment?.isLocal)
+
+        assert.isTrue(await Drive.exists(responsiveAttachment?.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.thumbnail.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.small.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.medium.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.large.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.xlarge.name!))
+
+        ctx.response.send(responsiveAttachment)
+        ctx.response.finish()
+      })
+    })
+
+    const { body } = await supertest(server)
+      .post('/')
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+
+    assert.isTrue(await Drive.exists(body.name))
+    assert.isTrue(await Drive.exists(body.breakpoints?.thumbnail.name))
+    assert.isTrue(await Drive.exists(body.breakpoints?.small.name))
+    assert.isTrue(await Drive.exists(body.breakpoints?.medium.name))
+    assert.isTrue(await Drive.exists(body.breakpoints?.large.name))
+    assert.isTrue(await Drive.exists(body.breakpoints?.xlarge.name))
+  })
+
+  test('pre-compute urls for newly created images', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const file = ctx.request.file('avatar')!
+        const responsiveAttachment = await ResponsiveAttachment.fromFile(file)
+        responsiveAttachment?.setOptions({
+          breakpoints: { small: 400, medium: 700, large: 1000, xlarge: 1200 },
+          preComputeUrls: true,
+        })
+        await responsiveAttachment?.save()
+
+        assert.isTrue(responsiveAttachment?.isPersisted)
+        assert.isTrue(responsiveAttachment?.isLocal)
+
+        assert.isNotEmpty(responsiveAttachment?.urls)
+
+        assert.isDefined(responsiveAttachment?.url)
+        assert.isDefined(responsiveAttachment?.urls?.breakpoints?.xlarge.url)
+        assert.isDefined(responsiveAttachment?.urls?.breakpoints?.large.url)
+        assert.isDefined(responsiveAttachment?.urls?.breakpoints?.medium.url)
+        assert.isDefined(responsiveAttachment?.urls?.breakpoints?.small.url)
+        assert.isDefined(responsiveAttachment?.urls?.breakpoints?.thumbnail.url)
+
+        assert.isNotNull(responsiveAttachment?.url)
+        assert.isNotNull(responsiveAttachment?.urls?.breakpoints?.xlarge.url)
+        assert.isNotNull(responsiveAttachment?.urls?.breakpoints?.large.url)
+        assert.isNotNull(responsiveAttachment?.urls?.breakpoints?.medium.url)
+        assert.isNotNull(responsiveAttachment?.urls?.breakpoints?.small.url)
+        assert.isNotNull(responsiveAttachment?.urls?.breakpoints?.thumbnail.url)
+
+        assert.isTrue(await Drive.exists(responsiveAttachment?.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.xlarge.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.large.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.medium.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.small.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.thumbnail.name!))
+
+        assert.equal(responsiveAttachment?.width, 1500)
+        assert.equal(responsiveAttachment?.breakpoints?.xlarge.width!, 1200)
+        assert.equal(responsiveAttachment?.breakpoints?.large.width!, 1000)
+        assert.equal(responsiveAttachment?.breakpoints?.medium.width!, 700)
+        assert.equal(responsiveAttachment?.breakpoints?.small.width!, 400)
+
+        assert.isTrue(
+          responsiveAttachment?.breakpoints?.thumbnail.size! <
+            responsiveAttachment?.breakpoints!.small.size!
         )
-        assert.match(
-          responsiveAttachment?.urls?.breakpoints?.small.url!,
-          /^\/uploads\/small.+\?signature=.+$/
+        assert.isTrue(
+          responsiveAttachment?.breakpoints?.small.size! <
+            responsiveAttachment?.breakpoints!.medium.size!
         )
-        assert.match(
-          responsiveAttachment?.urls?.breakpoints?.large.url!,
-          /^\/uploads\/large.+\?signature=.+$/
+        assert.isTrue(
+          responsiveAttachment?.breakpoints?.medium.size! <
+            responsiveAttachment?.breakpoints!.large.size!
         )
-        assert.match(
-          responsiveAttachment?.urls?.breakpoints?.medium.url!,
-          /^\/uploads\/medium.+\?signature=.+$/
+        assert.isTrue(
+          responsiveAttachment?.breakpoints?.large.size! <
+            responsiveAttachment?.breakpoints?.xlarge.size!
         )
+        assert.isTrue(responsiveAttachment?.breakpoints!.xlarge.size! < responsiveAttachment?.size!)
 
         ctx.response.send(responsiveAttachment)
         ctx.response.finish()

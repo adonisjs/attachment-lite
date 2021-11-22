@@ -7,7 +7,7 @@
 ---
 
 
-[![test](https://github.com/ndianabasi/adonis-responsive-attachment/actions/workflows/test.yml/badge.svg)](https://github.com/ndianabasi/adonis-responsive-attachment/actions/workflows/test.yml)
+[![github-actions-image]][github-actions-url] [![npm-image]][npm-url] [![license-image]][license-url] [![typescript-image]][typescript-url]
 
 The Adonis Responsive Attachment package converts any column on your Lucid model to an image attachment data type while generating and persisting optimised responsive images from the uploaded image including the original image.
 
@@ -40,6 +40,8 @@ On the frontend of your blog, you can use the `srcset` attribute of the `img` el
 - Allows you to disable generation of responsive images.
 - Allows you to disable optimisation of images.
 - Converts images from one format to another. The following formats are supported: `jpeg`, `png`, `webp`, `tiff`, and `avif`.
+- Allows you to disable some breakpoints
+- Allows you to disable the generation of the thumbnail image without affecting the generation of other responsive images.
 
 ## Pre-requisites
 
@@ -163,7 +165,8 @@ The `responsiveAttachment` decorator accepts the following options:
 5. `optimizeSize` - boolean,
 6. `optimizeOrientation` - boolean,
 7. `responsiveDimensions` - boolean,
-8. `preComputeUrls` - boolean.
+8. `preComputeUrls` - boolean,
+9. `disableThumbnail` - boolean.
 
 Let's discuss these options
 
@@ -246,6 +249,28 @@ post.coverImage.breakpoints.large.name // exists
 post.coverImage.breakpoints.xlarge.name // extra breakpoint exists
 ```
 
+You can also choose to cherry-pick which breakpoint image you want to generate
+
+```ts
+class Post extends BaseModel {
+  @responsiveAttachment({
+  large: 'off', // Disable the `large` breakpoint
+  medium: 'off', // Disable the `medium` breakpoint
+  small: 550, // Make you overwrite `small`
+}
+)
+  public coverImage: ResponsiveAttachmentContract
+}
+
+const post = await Post.findOrFail(1)
+post.coverImage.name // exists
+post.coverImage.breakpoints.thumbnail.name // exists
+post.coverImage.breakpoints.small.name // exists
+
+post.coverImage.breakpoints.medium // does not exist
+post.coverImage.breakpoints.large // does not exist
+```
+
 ### 4. The `forceFormat` Option
 
 The `forceFormat` option is used to change the image from one format to another. By default, the `adonis-responsive-attachment` will maintain the format of the uploaded image when persisting the original image and generating the responsive images. However, assuming you want to force the conversion of all supported formats to the `webp` format, you can do:
@@ -299,6 +324,25 @@ class Post extends BaseModel {
 ### 8. The `preComputeUrls` Option
 
 Read more about this option in this section: [Using the preComputeUrls Option](#using-the-precomputeurls-option).
+
+### 9. The `disableThumbnail` Option
+
+The `disableThumbnail` option, if set to `true`, allows you to disable the generation of the thumbnail without affecting the generation of other breakpoint images.
+
+```ts
+class Post extends BaseModel {
+  @responsiveAttachment({disableThumbnail: true})
+  public coverImage: ResponsiveAttachmentContract
+}
+
+const post = await Post.findOrFail(1)
+post.coverImage.name // exists
+post.coverImage.breakpoints.small.name // exists
+post.coverImage.breakpoints.medium.name // exists
+post.coverImage.breakpoints.large.name // exists
+
+post.coverImage.breakpoints.thumbnail // does not exist
+```
 
 ## Generating URLs
 

@@ -224,6 +224,7 @@ export const responsiveAttachment: ResponsiveAttachmentDecorator = (options) => 
       optimizeOrientation = true,
       optimizeSize = true,
       responsiveDimensions = true,
+      disableThumbnail = false,
       ...columnOptions
     } = options || {}
 
@@ -247,6 +248,7 @@ export const responsiveAttachment: ResponsiveAttachmentDecorator = (options) => 
         optimizeOrientation,
         optimizeSize,
         responsiveDimensions,
+        disableThumbnail,
       },
     })
 

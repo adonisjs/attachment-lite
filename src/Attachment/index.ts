@@ -9,7 +9,6 @@
 
 /// <reference path="../../adonis-typings/index.ts" />
 
-import { Exception } from '@poppinss/utils'
 import type { MultipartFileContract } from '@ioc:Adonis/Core/BodyParser'
 import type { DriveManagerContract, ContentHeaders } from '@ioc:Adonis/Core/Drive'
 import type {
@@ -23,27 +22,20 @@ import type {
   ImageAttributes,
 } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 import {
+  allowedFormats,
   generateBreakpointImages,
   generateName,
   generateThumbnail,
   getDimensions,
   optimize,
 } from '../Helpers/ImageManipulationHelper'
-import _ from 'lodash'
+import { merge, isEmpty, assign, set } from 'lodash'
 import cuid from 'cuid'
 import { DEFAULT_BREAKPOINTS } from './decorator'
 
-const REQUIRED_ATTRIBUTES = [
-  'name',
-  'size',
-  'extname',
-  'mimeType',
-  'width',
-  'height',
-  'hash',
-  'breakpoints',
-  'format',
-]
+// Some required attributes have been removed to improve
+// compatibility with the `attachment-lite` add-on
+const REQUIRED_ATTRIBUTES = ['name', 'size', 'extname', 'mimeType']
 
 /**
  * Attachment class represents an attachment data type
@@ -76,6 +68,12 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
       // This will be removed after the operation is completed
       await file.moveToDisk('image_upload_tmp')
 
+      if (allowedFormats.includes(file?.subtype as AttachmentOptions['forceFormat']) === false) {
+        throw new RangeError(
+          `Uploaded file is not an allowable image. Make sure that you uploaded only the following format: "jpeg", "png", "webp", "tiff", and "avif".`
+        )
+      }
+
       const attributes = {
         extname: file.extname!,
         mimeType: `${file.type}/${file.subtype}`,
@@ -103,7 +101,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
      */
     REQUIRED_ATTRIBUTES.forEach((attribute) => {
       if (attributes[attribute] === undefined) {
-        throw new Exception(
+        throw new RangeError(
           `Cannot create attachment from database response. Missing attribute "${attribute}"`
         )
       }
@@ -249,7 +247,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
    * Define persistance options
    */
   public setOptions(options?: AttachmentOptions) {
-    this.options = _.merge(
+    this.options = merge(
       {
         preComputeUrls: false,
         breakpoints: DEFAULT_BREAKPOINTS,
@@ -274,7 +272,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     // Override the `imageInfo` object with the optimised `info` object
     // As the optimised `info` object is preferred
     // Also append the `hash` and `buffer`
-    return _.assign({ ...this.attributes }, info, { hash: cuid(), buffer })
+    return assign({ ...this.attributes }, info, { hash: cuid(), buffer })
   }
 
   /**
@@ -341,7 +339,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
        */
       delete thumbnailImageData.buffer
 
-      _.set(enhancedImageData, 'breakpoints.thumbnail', thumbnailImageData)
+      set(enhancedImageData, 'breakpoints.thumbnail', thumbnailImageData)
     }
 
     /**
@@ -364,7 +362,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
          */
         delete breakpointImageData.buffer
 
-        _.set(enhancedImageData, ['breakpoints', key], breakpointImageData)
+        set(enhancedImageData, ['breakpoints', key], breakpointImageData)
       }
     }
 
@@ -373,7 +371,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     delete enhancedImageData.buffer
     delete enhancedImageData.path
 
-    _.assign(enhancedImageData, {
+    assign(enhancedImageData, {
       width,
       height,
     })
@@ -398,7 +396,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
      */
     await this.getDisk().delete(this.path!)
 
-    return _.merge(enhancedImageData, this.urls)
+    return merge(enhancedImageData, this.urls)
   }
 
   /**
@@ -494,7 +492,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
           this.urls['url'] = url
           this.url = url
         } else if (key === 'breakpoints') {
-          if (_.isEmpty(value) !== true) {
+          if (isEmpty(value) !== true) {
             if (!this.urls.breakpoints) this.urls.breakpoints = {} as ImageBreakpoints
 
             for (const breakpoint in value) {

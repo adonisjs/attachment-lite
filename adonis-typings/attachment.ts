@@ -17,7 +17,12 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
     DriveManagerContract,
   } from '@ioc:Adonis/Core/Drive'
 
-  export type Breakpoints = { large: number; medium: number; small: number }
+  export type Breakpoints = Partial<{
+    large: number | 'off'
+    medium: number | 'off'
+    small: number | 'off'
+  }> &
+    Record<string, number | 'off'>
 
   /**
    * Options used to persist the attachment to
@@ -31,6 +36,7 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
     optimizeSize?: boolean
     optimizeOrientation?: boolean
     responsiveDimensions?: boolean
+    disableThumbnail?: boolean
     preComputeUrls?:
       | boolean
       | ((disk: DriverContract, attachment: ResponsiveAttachmentContract) => Promise<UrlRecords>)

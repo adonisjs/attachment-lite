@@ -13,7 +13,7 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
     large: ImageAttributes
     medium: ImageAttributes
     small: ImageAttributes
-  }
+  } & Record<string, ImageAttributes>
 
   export type ImageInfo = {
     name?: string

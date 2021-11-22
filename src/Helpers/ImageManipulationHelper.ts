@@ -8,11 +8,11 @@ import {
   FileDimensions,
 } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 import { cuid } from '@poppinss/utils/build/helpers'
-import _ from 'lodash'
+import { merge, pickBy, isEmpty } from 'lodash'
 import { DEFAULT_BREAKPOINTS } from '../Attachment/decorator'
 
 const getMergedOptions = function (options: AttachmentOptions): AttachmentOptions {
-  return _.merge(
+  return merge(
     {
       preComputeUrls: false,
       breakpoints: DEFAULT_BREAKPOINTS,
@@ -20,6 +20,7 @@ const getMergedOptions = function (options: AttachmentOptions): AttachmentOption
       optimizeOrientation: true,
       optimizeSize: true,
       responsiveDimensions: true,
+      disableThumbnail: false,
     },
     options
   )
@@ -113,6 +114,7 @@ export const generateBreakpoint = async ({
         hash: imageData.hash,
         extname,
         mimeType: `image/${format}`,
+        format: format as AttachmentOptions['forceFormat'],
         width: width,
         height: height,
         size: bytesToKBytes(size!),
@@ -197,7 +199,9 @@ export const generateThumbnail = async function (
     return null
   }
 
-  if (!options?.responsiveDimensions) return null
+  if (!options?.responsiveDimensions || options?.disableThumbnail) {
+    return null
+  }
 
   const { width, height } = await getDimensions(imageData.buffer!)
 
@@ -228,6 +232,7 @@ export const generateThumbnail = async function (
         hash: imageData.hash,
         extname,
         mimeType: `image/${format}`,
+        format: format as AttachmentOptions['forceFormat'],
         width: thumbnailWidth,
         height: thumbnailHeight,
         size: bytesToKBytes(size!),
@@ -258,8 +263,14 @@ export const generateBreakpointImages = async function (
 
   const originalDimensions: FileDimensions = await getDimensions(imageData.buffer!)
 
+  const activeBreakpoints = pickBy(options.breakpoints, (value) => {
+    return value !== 'off'
+  })
+
+  if (isEmpty(activeBreakpoints)) return []
+
   return Promise.all(
-    Object.keys(options.breakpoints ?? {})?.map((key) => {
+    Object.keys(activeBreakpoints).map((key) => {
       const breakpointValue = options.breakpoints?.[key] as number
 
       const isBreakpointSmallerThanOriginal = breakpointSmallerThan(
