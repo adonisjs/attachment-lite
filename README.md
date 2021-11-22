@@ -600,13 +600,13 @@ await Post.preComputeUrls(post)
 return post
 ```
  
-[github-actions-image]: https://img.shields.io/github/workflow/status/adonisjs/attachment-lite/test?style=for-the-badge
-[github-actions-url]: https://github.com/adonisjs/attachment-lite/actions/workflows/test.yml "github-actions"
+[github-actions-image]: https://img.shields.io/github/workflow/status/ndianabasi/adonis-responsive-attachment/test?style=for-the-badge
+[github-actions-url]: https://github.com/adonisjs/adonis-responsive-attachment/actions/workflows/test.yml "github-actions"
 
-[npm-image]: https://img.shields.io/npm/v/@adonisjs/attachment-lite.svg?style=for-the-badge&logo=npm
-[npm-url]: https://npmjs.org/package/@adonisjs/attachment-lite "npm"
+[npm-image]: https://img.shields.io/npm/v/adonis-responsive-attachment.svg?style=for-the-badge&logo=npm
+[npm-url]: https://npmjs.org/package/adonis-responsive-attachment "npm"
 
-[license-image]: https://img.shields.io/npm/l/@adonisjs/attachment-lite?color=blueviolet&style=for-the-badge
+[license-image]: https://img.shields.io/npm/l/adonis-responsive-attachment?color=blueviolet&style=for-the-badge
 [license-url]: LICENSE.md "license"
 
 [typescript-image]: https://img.shields.io/badge/Typescript-294E80.svg?style=for-the-badge&logo=typescript
