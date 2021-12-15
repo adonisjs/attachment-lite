@@ -20,7 +20,7 @@
     "lint": "eslint . --ext=.ts",
     "format": "prettier --write .",
     "commit": "git-cz",
-    "release": "np",
+    "release": "np --branch=develop --yolo --no-yarn",
     "version": "npm run build",
     "sync-labels": "github-label-sync --labels ./node_modules/@adonisjs/mrm-preset/gh-labels.json ndianabasi/adonis-responsive-attachment"
   },
