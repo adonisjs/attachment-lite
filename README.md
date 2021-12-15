@@ -11,13 +11,13 @@
 
 The Adonis Responsive Attachment package converts any column on your Lucid model to an image attachment data type while generating and persisting optimised responsive images from the uploaded image including the original image.
 
-Adonis Responsive Attachment generates very detailed metadata of the original file and each responsive image generated from the uploaded file and persist the metadata within the database. It does not require any additional database tables and stores the file metadata as JSON within the same column.
+Adonis Responsive Attachment generates very detailed metadata of the original file and generated responsive images and persists the metadata to the `decorated` column within the database. It does not require any additional database tables and stores the file metadata as JSON within the same specified/decorated column.
 
-This add-on only accepts image files and is a fork of the [Attachment Lite](https://github.com/adonisjs/attachment-lite) add-on which only persists the original uploaded file plus its metadata.
+This add-on only accepts image files and is a fork of the [Attachment Lite](https://github.com/adonisjs/attachment-lite) add-on. The main difference between the `Adonis Responsive Attachment` and `Attachment Lite` is that `Attachment Lite` accepts all file types while `Adonis Responsive Attachment` only accepts image files. Also, `Attachment Lite` only persists the original uploaded file plus its metadata while `Adonis Responsive Attachment` persists the uploaded image and generated responsive images to disk and their metadata to the database.
 
 ## Why Use this Add-On?
 
-The ability of your application/website to serve different sizes of the same image across different devices is a important factor for improving the performance of your application/website. If your visitor is accessing your website with a mobile device whose screen width is less than 500px, it is performant and data-friendly to serve that device a banner which isn't wider than 500px. On the other hand, if a visitor is accessing your website with a laptop with a minimum screen size of 1400px, it makes sense not to serve that device a banner whose width is less than 1200px so that the image does not appear pixelated.
+The ability of your application/website to serve different sizes of the same image across different devices is an important factor for improving the performance of your application/website. If your visitor is accessing your website with a mobile device whose screen width is less than 500px, it is performant and data-friendly to serve that device a banner which isn't wider than 500px. On the other hand, if a visitor is accessing your website with a laptop with a minimum screen size of 1400px, it makes sense not to serve that device a banner whose width is less than 1200px so that the image does not appear pixelated.
 
 The Adonis Responsive Attachment add-on provides the ability to generate unlimited number of responsive sizes from an uploaded image and utilise the `srcset` and `sizes` attributes to serve and render different sizes of the same image to a visitor based on the size of their screen. You should get familiar with this concept by studying the [Responsive Images topic on MDN](https://developer.mozilla.org/en-US/docs/Learn/HTML/Multimedia_and_embedding/Responsive_images).
 
@@ -30,7 +30,7 @@ On the frontend of your blog, you can use the `srcset` attribute of the `img` el
 ## Features
 
 - Turn any column in your database to an image attachment data type.
-- No additional database tables are required. The file metadata is stored as JSON within the same column.
+- No additional database tables are required. The metadata of the original and responsive images are stored as JSON within the same column.
 - Automatically removes the old images (original and generated responsive images) from the disk when a new image is assigned to the model.
 - Handles failure cases gracefully. No images will be stored if the model fails to persist.
 - Similarly, no old images are removed if the model fails to persist during an update or the deletion fails.
@@ -40,7 +40,7 @@ On the frontend of your blog, you can use the `srcset` attribute of the `img` el
 - Allows you to disable generation of responsive images.
 - Allows you to disable optimisation of images.
 - Converts images from one format to another. The following formats are supported: `jpeg`, `png`, `webp`, `tiff`, and `avif`.
-- Allows you to disable some breakpoints
+- Allows you to disable some breakpoints.
 - Allows you to disable the generation of the thumbnail image without affecting the generation of other responsive images.
 
 ## Pre-requisites
@@ -67,7 +67,38 @@ node ace configure adonis-responsive-attachment
 
 ## Usage
 
-The first step is to import the `responsiveAttachment` decorator and the `ResponsiveAttachmentContract` interface from the `adonis-responsive-attachment` package.
+First and very importantly, this addon generates a large metadata for the original and generated images which will persisted to the database. So, the column for storing the metadata must be a JSON data type. 
+
+If you are creating the column for the first time, make sure that you use the JSON data type. Example:
+
+```ts
+  protected tableName = 'posts'
+  
+  public async up() {
+    this.schema.createTable(this.tableName, (table) => {
+      table.increments()
+      table.json('cover_image') // <-- Use a JSON data type
+    })
+  }
+```
+
+If you already have a column for storing image paths/URLs, you need to create a new migration and alter the column definition to a JSON data type. Example:
+
+```bash
+node ace make:migration change_cover_image_column_to_json --table=posts
+```
+
+```ts
+  protected tableName = 'posts'
+
+  public async up() {
+    this.schema.alterTable(this.tableName, (table) => {
+      table.json('cover_image').alter() // <-- Alter the column definition
+    })
+  }
+```
+
+The next step is to import the `responsiveAttachment` decorator and the `ResponsiveAttachmentContract` interface from the `adonis-responsive-attachment` package.
 
 > Make sure NOT to use the `@column` decorator when using the `@responsiveAttachment` decorator.
 
@@ -102,7 +133,7 @@ class PostsController {
 
 > NOTE: You should `await` the operation `ResponsiveAttachment.fromFile(coverImage)` as the uploaded image is being temporarily persisted during the `fromFile` operation. This is a bit different from the approach of the `attachment-lite` add-on.
 
-The `ResponsiveAttachment.fromFile` creates an instance of the ResponsiveAttachment class from the uploaded file. When you persist the model to the database, the `adonis-responsive-attachment` will write the file to the disk.
+The `ResponsiveAttachment.fromFile` static method creates an instance of the ResponsiveAttachment class from the uploaded file. When you persist the model to the database, the `adonis-responsive-attachment` will write the file to the disk.
 
 ### Handling updates
 You can update the property with a newly image, and the package will take care of removing the old images and generating and persisting new responsive images.
@@ -231,10 +262,10 @@ If you need to customise the `breakpoints` options, you need to overwrite the de
 ```ts
 class Post extends BaseModel {
   @responsiveAttachment({
-  xlarge: 1400,
-  large: 1050, // Make you overwrite `large`
-  medium: 800, // Make you overwrite `medium`
-  small: 550, // Make you overwrite `small`
+  xlarge: 1400, // This is a custom/extra breakpoint
+  large: 1050, // Make sure you overwrite `large`
+  medium: 800, // Make sure you overwrite `medium`
+  small: 550, // Make sure you overwrite `small`
 }
 )
   public coverImage: ResponsiveAttachmentContract
@@ -273,7 +304,7 @@ post.coverImage.breakpoints.large // does not exist
 
 ### 4. The `forceFormat` Option
 
-The `forceFormat` option is used to change the image from one format to another. By default, the `adonis-responsive-attachment` will maintain the format of the uploaded image when persisting the original image and generating the responsive images. However, assuming you want to force the conversion of all supported formats to the `webp` format, you can do:
+The `forceFormat` option is used to change the image from one format to another. By default, the `adonis-responsive-attachment` addon will maintain the format of the uploaded image when persisting the original image and generating the responsive images. However, assuming you want to force the conversion of all supported formats to the `webp` format, you can do:
 
 ```ts
 class Post extends BaseModel {
@@ -601,7 +632,7 @@ return post
 ```
  
 [github-actions-image]: https://img.shields.io/github/workflow/status/ndianabasi/adonis-responsive-attachment/test?style=for-the-badge
-[github-actions-url]: https://github.com/adonisjs/adonis-responsive-attachment/actions/workflows/test.yml "github-actions"
+[github-actions-url]: https://github.com/ndianabasi/adonis-responsive-attachment/actions/workflows/test.yml "github-actions"
 
 [npm-image]: https://img.shields.io/npm/v/adonis-responsive-attachment.svg?style=for-the-badge&logo=npm
 [npm-url]: https://npmjs.org/package/adonis-responsive-attachment "npm"
