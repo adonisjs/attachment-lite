@@ -20,6 +20,7 @@ import { BodyParserMiddleware } from '@adonisjs/bodyparser/build/src/BodyParser'
 import { Attachment } from '../src/Attachment'
 import { attachment } from '../src/Attachment/decorator'
 import { setup, cleanup, setupApplication } from '../test-helpers'
+import { readFile } from 'fs/promises'
 
 let app: ApplicationContract
 
@@ -1426,5 +1427,550 @@ test.group('@attachment | paginate', (group) => {
     assert.isUndefined(body.avatar.url)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
+  })
+})
+
+test.group('@attachment | fromBuffer | insert', (group) => {
+  group.before(async () => {
+    app = await setupApplication()
+    await setup(app)
+
+    app.container.resolveBinding('Adonis/Core/Route').commit()
+    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+  })
+
+  group.afterEach(async () => {
+    await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
+  })
+
+  group.after(async () => {
+    await cleanup(app)
+  })
+
+  test('save attachment to the db and on disk', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+    const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
+    const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
+
+    class User extends BaseModel {
+      @column({ isPrimary: true })
+      public id: string
+
+      @column()
+      public username: string
+
+      @attachment()
+      public avatar: AttachmentContract | null
+    }
+
+    const server = createServer((req, res) => {
+      const ctx = HttpContext.create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const buffer = await readFile(join(__dirname, '../cat.jpeg'))
+
+        const user = new User()
+        user.username = 'ndianabasi'
+        user.avatar = Attachment.fromBuffer(buffer, 'avatar', 'avatar-1')
+        await user.save()
+
+        ctx.response.send(user)
+        ctx.response.finish()
+      })
+    })
+
+    const { body } = await supertest(server).post('/')
+
+    const users = await User.all()
+
+    assert.lengthOf(users, 1)
+    assert.instanceOf(users[0].avatar, Attachment)
+    assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
+
+    assert.isTrue(await Drive.exists(body.avatar.name))
+  })
+
+  test('cleanup attachments when save call fails', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+    const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
+    const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
+
+    class User extends BaseModel {
+      @column({ isPrimary: true })
+      public id: string
+
+      @column()
+      public username: string
+
+      @attachment()
+      public avatar: AttachmentContract | null
+    }
+
+    await User.create({ username: 'ndianabasi' })
+
+    const server = createServer((req, res) => {
+      const ctx = HttpContext.create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const buffer = await readFile(join(__dirname, '../cat.jpeg'))
+
+        const user = new User()
+        user.username = 'ndianabasi'
+        user.avatar = Attachment.fromBuffer(buffer, 'avatar', 'avatar-1')
+
+        try {
+          await user.save()
+        } catch (error) {}
+
+        ctx.response.send(user)
+        ctx.response.finish()
+      })
+    })
+
+    const { body } = await supertest(server).post('/')
+
+    const users = await User.all()
+
+    assert.lengthOf(users, 1)
+    assert.isNull(users[0].avatar)
+    assert.isFalse(await Drive.exists(body.avatar.name))
+  })
+})
+
+test.group('@attachment | fromBuffer | insert with transaction', (group) => {
+  group.before(async () => {
+    app = await setupApplication()
+    await setup(app)
+
+    app.container.resolveBinding('Adonis/Core/Route').commit()
+    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+  })
+
+  group.afterEach(async () => {
+    await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
+  })
+
+  group.after(async () => {
+    await cleanup(app)
+  })
+
+  test('save attachment to the db and on disk', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+    const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
+    const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
+    const Db = app.container.resolveBinding('Adonis/Lucid/Database')
+
+    class User extends BaseModel {
+      @column({ isPrimary: true })
+      public id: string
+
+      @column()
+      public username: string
+
+      @attachment()
+      public avatar: AttachmentContract | null
+    }
+
+    const server = createServer((req, res) => {
+      const ctx = HttpContext.create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const buffer = await readFile(join(__dirname, '../cat.jpeg'))
+        const trx = await Db.transaction()
+
+        const user = new User()
+        user.username = 'virk'
+        user.avatar = Attachment.fromBuffer(buffer, 'avatar', 'avatar-1')
+        await user.useTransaction(trx).save()
+
+        await trx.commit()
+
+        ctx.response.send(user)
+        ctx.response.finish()
+      })
+    })
+
+    const { body } = await supertest(server).post('/')
+
+    const users = await User.all()
+
+    assert.lengthOf(users, 1)
+    assert.instanceOf(users[0].avatar, Attachment)
+    assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
+
+    assert.isTrue(await Drive.exists(body.avatar.name))
+  })
+
+  test('cleanup attachments when save call fails', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+    const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
+    const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
+    const Db = app.container.resolveBinding('Adonis/Lucid/Database')
+
+    class User extends BaseModel {
+      @column({ isPrimary: true })
+      public id: string
+
+      @column()
+      public username: string
+
+      @attachment()
+      public avatar: AttachmentContract | null
+    }
+
+    await User.create({ username: 'virk' })
+
+    const server = createServer((req, res) => {
+      const ctx = HttpContext.create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const buffer = await readFile(join(__dirname, '../cat.jpeg'))
+        const trx = await Db.transaction()
+
+        const user = new User()
+        user.username = 'virk'
+        user.avatar = Attachment.fromBuffer(buffer, 'avatar', 'avatar-1')
+
+        try {
+          await user.useTransaction(trx).save()
+          await trx.commit()
+        } catch (error) {
+          await trx.rollback()
+        }
+
+        ctx.response.send(user)
+        ctx.response.finish()
+      })
+    })
+
+    const { body } = await supertest(server).post('/')
+
+    const users = await User.all()
+
+    assert.lengthOf(users, 1)
+    assert.isNull(users[0].avatar)
+    assert.isFalse(await Drive.exists(body.avatar.name))
+  })
+
+  test('cleanup attachments when rollback is called after success', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+    const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
+    const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
+    const Db = app.container.resolveBinding('Adonis/Lucid/Database')
+
+    class User extends BaseModel {
+      @column({ isPrimary: true })
+      public id: string
+
+      @column()
+      public username: string
+
+      @attachment()
+      public avatar: AttachmentContract | null
+    }
+
+    const server = createServer((req, res) => {
+      const ctx = HttpContext.create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const buffer = await readFile(join(__dirname, '../cat.jpeg'))
+        const trx = await Db.transaction()
+
+        const user = new User()
+        user.username = 'virk'
+        user.avatar = Attachment.fromBuffer(buffer, 'avatar', 'avatar-1')
+        await user.useTransaction(trx).save()
+        await trx.rollback()
+
+        ctx.response.send(user)
+        ctx.response.finish()
+      })
+    })
+
+    const { body } = await supertest(server).post('/')
+
+    const users = await User.all()
+
+    assert.lengthOf(users, 0)
+    assert.isFalse(await Drive.exists(body.avatar.name))
+  })
+})
+
+test.group('@attachment | fromBuffer | update', (group) => {
+  group.before(async () => {
+    app = await setupApplication()
+    await setup(app)
+
+    app.container.resolveBinding('Adonis/Core/Route').commit()
+    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+  })
+
+  group.afterEach(async () => {
+    await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
+  })
+
+  group.after(async () => {
+    await cleanup(app)
+  })
+
+  test('save attachment to the db and on disk', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+    const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
+    const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
+
+    class User extends BaseModel {
+      @column({ isPrimary: true })
+      public id: string
+
+      @column()
+      public username: string
+
+      @attachment()
+      public avatar: AttachmentContract | null
+    }
+
+    const server = createServer((req, res) => {
+      const ctx = HttpContext.create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const buffer = await readFile(join(__dirname, '../cat.jpeg'))
+
+        const user = await User.firstOrNew({ username: 'virk' }, {})
+        user.avatar = Attachment.fromBuffer(buffer, 'avatar', 'avatar-1')
+        await user.save()
+
+        ctx.response.send(user)
+        ctx.response.finish()
+      })
+    })
+
+    const { body: firstResponse } = await supertest(server).post('/')
+
+    const { body: secondResponse } = await supertest(server).post('/')
+
+    const users = await User.all()
+
+    assert.lengthOf(users, 1)
+    assert.instanceOf(users[0].avatar, Attachment)
+    assert.deepEqual(users[0].avatar?.toJSON(), secondResponse.avatar)
+    assert.isFalse(await Drive.exists(firstResponse.avatar.name))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.name))
+  })
+
+  test('cleanup attachments when save call fails', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+    const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
+    const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
+
+    class User extends BaseModel {
+      @column({ isPrimary: true })
+      public id: string
+
+      @column()
+      public username: string
+
+      @attachment()
+      public avatar: AttachmentContract | null
+    }
+
+    const server = createServer((req, res) => {
+      const ctx = HttpContext.create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const buffer = await readFile(join(__dirname, '../cat.jpeg'))
+
+        const user = new User()
+        user.username = 'virk'
+        user.avatar = Attachment.fromBuffer(buffer, 'avatar', 'avatar-1')
+
+        try {
+          await user.save()
+        } catch {}
+
+        ctx.response.send(user)
+        ctx.response.finish()
+      })
+    })
+
+    const { body: firstResponse } = await supertest(server).post('/')
+
+    const { body: secondResponse } = await supertest(server).post('/')
+
+    const users = await User.all()
+
+    assert.lengthOf(users, 1)
+    assert.instanceOf(users[0].avatar, Attachment)
+    assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
+    assert.isTrue(await Drive.exists(firstResponse.avatar.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.name))
+  })
+})
+
+test.group('@attachment | fromBuffer | update with transaction', (group) => {
+  group.before(async () => {
+    app = await setupApplication()
+    await setup(app)
+
+    app.container.resolveBinding('Adonis/Core/Route').commit()
+    Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+  })
+
+  group.afterEach(async () => {
+    await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
+  })
+
+  group.after(async () => {
+    await cleanup(app)
+  })
+
+  test('save attachment to the db and on disk', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+    const Db = app.container.resolveBinding('Adonis/Lucid/Database')
+    const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
+    const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
+
+    class User extends BaseModel {
+      @column({ isPrimary: true })
+      public id: string
+
+      @column()
+      public username: string
+
+      @attachment()
+      public avatar: AttachmentContract | null
+    }
+
+    const server = createServer((req, res) => {
+      const ctx = HttpContext.create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const buffer = await readFile(join(__dirname, '../cat.jpeg'))
+        const trx = await Db.transaction()
+
+        const user = await User.firstOrNew({ username: 'virk' }, {}, { client: trx })
+        user.avatar = Attachment.fromBuffer(buffer, 'avatar', 'avatar-1')
+        await user.save()
+        await trx.commit()
+
+        ctx.response.send(user)
+        ctx.response.finish()
+      })
+    })
+
+    const { body: firstResponse } = await supertest(server).post('/')
+
+    const { body: secondResponse } = await supertest(server).post('/')
+
+    const users = await User.all()
+
+    assert.lengthOf(users, 1)
+    assert.instanceOf(users[0].avatar, Attachment)
+    assert.deepEqual(users[0].avatar?.toJSON(), secondResponse.avatar)
+    assert.isFalse(await Drive.exists(firstResponse.avatar.name))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.name))
+  })
+
+  test('cleanup attachments when save call fails', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+    const Db = app.container.resolveBinding('Adonis/Lucid/Database')
+    const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
+    const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
+
+    class User extends BaseModel {
+      @column({ isPrimary: true })
+      public id: string
+
+      @column()
+      public username: string
+
+      @attachment()
+      public avatar: AttachmentContract | null
+    }
+
+    const server = createServer((req, res) => {
+      const ctx = HttpContext.create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const buffer = await readFile(join(__dirname, '../cat.jpeg'))
+        const trx = await Db.transaction()
+
+        const user = new User()
+        user.username = 'virk'
+        user.avatar = Attachment.fromBuffer(buffer, 'avatar', 'avatar-1')
+
+        try {
+          await user.useTransaction(trx).save()
+          await trx.commit()
+        } catch {
+          await trx.rollback()
+        }
+
+        ctx.response.send(user)
+        ctx.response.finish()
+      })
+    })
+
+    const { body: firstResponse } = await supertest(server).post('/')
+
+    const { body: secondResponse } = await supertest(server).post('/')
+
+    const users = await User.all()
+
+    assert.lengthOf(users, 1)
+    assert.instanceOf(users[0].avatar, Attachment)
+    assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
+    assert.isTrue(await Drive.exists(firstResponse.avatar.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.name))
+  })
+
+  test('cleanup attachments when rollback is called after success', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+    const Db = app.container.resolveBinding('Adonis/Lucid/Database')
+    const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
+    const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
+
+    class User extends BaseModel {
+      @column({ isPrimary: true })
+      public id: string
+
+      @column()
+      public username: string
+
+      @attachment()
+      public avatar: AttachmentContract | null
+    }
+
+    const server = createServer((req, res) => {
+      const ctx = HttpContext.create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const buffer = await readFile(join(__dirname, '../cat.jpeg'))
+        const trx = await Db.transaction()
+
+        const user = await User.firstOrNew({ username: 'virk' }, {}, { client: trx })
+        const isLocal = user.$isLocal
+
+        user.username = 'virk'
+        user.avatar = Attachment.fromBuffer(buffer, 'avatar', 'avatar-1')
+        await user.useTransaction(trx).save()
+
+        isLocal ? await trx.commit() : await trx.rollback()
+
+        ctx.response.send(user)
+        ctx.response.finish()
+      })
+    })
+
+    const { body: firstResponse } = await supertest(server).post('/')
+
+    const { body: secondResponse } = await supertest(server).post('/')
+
+    const users = await User.all()
+
+    assert.lengthOf(users, 1)
+    assert.instanceOf(users[0].avatar, Attachment)
+    assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
+    assert.isTrue(await Drive.exists(firstResponse.avatar.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.name))
   })
 })

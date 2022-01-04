@@ -11,7 +11,7 @@
 
 import { Exception } from '@poppinss/utils'
 import { cuid } from '@poppinss/utils/build/helpers'
-import { fileTypeFromBuffer } from 'file-type'
+import detect from 'detect-file-type'
 import { File } from '@adonisjs/bodyparser/build/src/Multipart/File'
 import { Readable } from 'stream'
 
@@ -64,15 +64,25 @@ export class Attachment implements AttachmentContract {
   /**
    * Create attachment instance from the bodyparser via a buffer
    */
-  public static async fromBuffer(buffer: Buffer, fieldName?: string, filename?: string) {
-    const bufferProperty = await fileTypeFromBuffer(buffer)
-    if (!bufferProperty) {
-      throw new Exception('Please provide a valid file buffer')
-    }
+  public static fromBuffer(buffer: Buffer, fieldName?: string, filename?: string): Attachment {
+    type BufferProperty = { ext: string; mime: string }
 
-    const { mime, ext } = bufferProperty
+    let bufferProperty: BufferProperty | undefined
+
+    detect.fromBuffer(buffer, function (err: Error | string, result: BufferProperty) {
+      if (err) {
+        throw new Error(err instanceof Error ? err.message : err)
+      }
+      if (!result) {
+        throw new Exception('Please provide a valid file buffer')
+      }
+      bufferProperty = result
+    })
+
+    const { mime, ext } = bufferProperty!
     const [type, subtype] = mime.split('/')
     const attributes = {
+      name: cuid(),
       extname: ext,
       mimeType: mime,
       size: buffer.length,

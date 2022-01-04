@@ -18,7 +18,7 @@ import { BodyParserMiddleware } from '@adonisjs/bodyparser/build/src/BodyParser'
 
 import { Attachment } from '../src/Attachment'
 import { setup, cleanup, setupApplication } from '../test-helpers'
-import { createReadStream } from 'fs'
+import { readFile } from 'fs/promises'
 
 let app: ApplicationContract
 
@@ -217,23 +217,19 @@ test.group('Attachment | fromBuffer', (group) => {
     await cleanup(app)
   })
 
-  test.only('create attachment from the user provided buffer', async (assert) => {
+  test('create attachment from the user provided buffer', async (assert) => {
     const server = createServer((req, res) => {
       const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
       app.container.make(BodyParserMiddleware).handle(ctx, async () => {
-        const readStream = createReadStream(join(__dirname, '../cat.jpeg'))
-        const data: Buffer[] = []
-        readStream.on('data', (chunk: Buffer) => data.push(chunk))
-        readStream.on('end', async () => {
-          const attachment = await Attachment.fromBuffer(Buffer.concat(data))
-          await attachment.save()
+        const readableStream = await readFile(join(__dirname, '../cat.jpeg'))
+        const attachment = Attachment.fromBuffer(readableStream, 'avatar', 'avatar-1')
+        await attachment.save()
 
-          assert.isTrue(attachment.isPersisted)
-          assert.isTrue(attachment.isLocal)
+        assert.isTrue(attachment.isPersisted)
+        assert.isTrue(attachment.isLocal)
 
-          ctx.response.send(attachment)
-          ctx.response.finish()
-        })
+        ctx.response.send(attachment)
+        ctx.response.finish()
       })
     })
 
@@ -248,8 +244,8 @@ test.group('Attachment | fromBuffer', (group) => {
       const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
 
       app.container.make(BodyParserMiddleware).handle(ctx, async () => {
-        const file = ctx.request.file('avatar')!
-        const attachment = Attachment.fromFile(file)
+        const readableStream = await readFile(join(__dirname, '../cat.jpeg'))
+        const attachment = Attachment.fromBuffer(readableStream, 'avatar', 'avatar-1')
         attachment.setOptions({ preComputeUrl: true })
         await attachment.save()
 
@@ -261,9 +257,7 @@ test.group('Attachment | fromBuffer', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
-      .post('/')
-      .attach('avatar', join(__dirname, '../cat.jpeg'))
+    const { body } = await supertest(server).post('/')
 
     assert.isDefined(body.url)
   })
@@ -273,8 +267,8 @@ test.group('Attachment | fromBuffer', (group) => {
       const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
 
       app.container.make(BodyParserMiddleware).handle(ctx, async () => {
-        const file = ctx.request.file('avatar')!
-        const attachment = Attachment.fromFile(file)
+        const readableStream = await readFile(join(__dirname, '../cat.jpeg'))
+        const attachment = Attachment.fromBuffer(readableStream, 'avatar', 'avatar-1')
         attachment.setOptions({ preComputeUrl: true })
         await attachment.save()
         await attachment.delete()
@@ -288,9 +282,7 @@ test.group('Attachment | fromBuffer', (group) => {
       })
     })
 
-    const { body } = await supertest(server)
-      .post('/')
-      .attach('avatar', join(__dirname, '../cat.jpeg'))
+    const { body } = await supertest(server).post('/')
 
     assert.isDefined(body.url)
   })

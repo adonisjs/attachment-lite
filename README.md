@@ -29,6 +29,7 @@ A very long story to tell you that the `attachment-lite` package is an excellent
 - Automatically removes the old file from the disk when a new file is assigned.
 - Handles failure cases gracefully. No files will be stored if the model fails to persist.
 - Similarly, no old files are removed if the model fails to persist during an update or the deletion fails.
+- Ability to create attachments from `Buffer`s.
 
 ## Pre-requisites
 The `attachment-lite` package requires `@adonisjs/lucid >= v16.3.1` and `@adonisjs/core >= 5.3.4`.
@@ -66,7 +67,7 @@ class User extends BaseModel {
 }
 ```
 
-Now you can create an attachment from the user uploaded file as follows.
+Now you can create an attachment from the user uploaded file as follows:
 
 ```ts
 import { Attachment } from '@ioc:Adonis/Addons/AttachmentLite'
@@ -74,15 +75,34 @@ import { Attachment } from '@ioc:Adonis/Addons/AttachmentLite'
 class UsersController {
   public store({ request }: HttpContextContract) {
     const avatar = request.file('avatar')!
-    const user = new User()
 
+    const user = new User()
     user.avatar = Attachment.fromFile(avatar)
     await user.save()
   }
 }
 ```
 
-The `Attachment.fromFile` creates an instance of the Attachment class from the user uploaded file. When you persist the model to the database, the attachment-lite will write the file to the disk.
+You can also create an attachment from a buffer as shown below. You are free to provide the buffer through any means in your disposal.
+
+```ts
+import { Attachment } from '@ioc:Adonis/Addons/AttachmentLite'
+import { readFile } from 'fs/promises'
+
+class UsersController {
+  public store({ request }: HttpContextContract) {
+    const buffer = await readFile(join(__dirname, '../me.jpeg'))
+
+    const user = new User()
+    user.avatar = Attachment.fromBuffer(buffer, 'avatar', 'avatar-1')
+    await user.save()
+  }
+}
+```
+
+The `Attachment.fromFile` method creates an instance of the Attachment class from the user uploaded file. When you persist the model to the database, the attachment-lite will write the file to the disk.
+
+The `Attachment.fromBuffer` method is similar to the `Attachment.fromFile` method. The only difference is that it creates an instance of the Attachment class from a buffer. This is specially useful when you want to create attachment programmatically from any source outside of the HTTP request cycle.
 
 ### Handling updates
 You can update the property with a newly uploaded user file, and the package will take care of removing the old file and storing the new one.
