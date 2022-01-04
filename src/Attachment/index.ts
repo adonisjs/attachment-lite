@@ -11,6 +11,10 @@
 
 import { Exception } from '@poppinss/utils'
 import { cuid } from '@poppinss/utils/build/helpers'
+import { fileTypeFromBuffer } from 'file-type'
+import { File } from '@adonisjs/bodyparser/build/src/Multipart/File'
+import { Readable } from 'stream'
+
 import type { MultipartFileContract } from '@ioc:Adonis/Core/BodyParser'
 import type { DriveManagerContract, ContentHeaders } from '@ioc:Adonis/Core/Drive'
 import type {
@@ -55,6 +59,42 @@ export class Attachment implements AttachmentContract {
     }
 
     return new Attachment(attributes, file)
+  }
+
+  /**
+   * Create attachment instance from the bodyparser via a buffer
+   */
+  public static async fromBuffer(buffer: Buffer, fieldName?: string, filename?: string) {
+    const bufferProperty = await fileTypeFromBuffer(buffer)
+    if (!bufferProperty) {
+      throw new Exception('Please provide a valid file buffer')
+    }
+
+    const { mime, ext } = bufferProperty
+    const [type, subtype] = mime.split('/')
+    const attributes = {
+      extname: ext,
+      mimeType: mime,
+      size: buffer.length,
+    }
+
+    const file = new File(
+      { fieldName: fieldName ?? '', clientName: filename ?? '', headers: {} },
+      {},
+      {} as DriveManagerContract
+    )
+
+    file.extname = ext
+    file.size = buffer.length
+    file.type = type
+    file.subtype = subtype
+    file.state = 'consumed'
+    file.errors = []
+    file.meta = {}
+    file.filePath = ''
+    file.fileName = ''
+
+    return new Attachment(attributes, file, buffer)
   }
 
   /**
@@ -130,7 +170,11 @@ export class Attachment implements AttachmentContract {
    */
   public isDeleted: boolean
 
-  constructor(private attributes: AttachmentAttributes, private file?: MultipartFileContract) {
+  constructor(
+    private attributes: AttachmentAttributes,
+    private file?: MultipartFileContract,
+    private buffer?: Buffer
+  ) {
     if (this.attributes.name) {
       this.name = this.attributes.name
     }
@@ -186,7 +230,9 @@ export class Attachment implements AttachmentContract {
     /**
      * Write to the disk
      */
-    await this.file!.moveToDisk('./', { name: this.name }, this.options?.disk)
+    if (this.buffer) {
+      this.getDisk().putStream(this.name, Readable.from(this.buffer.toString()))
+    } else await this.file!.moveToDisk('./', { name: this.name }, this.options?.disk)
 
     /**
      * File has been persisted
