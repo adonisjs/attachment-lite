@@ -9,7 +9,7 @@
 
 [![github-actions-image]][github-actions-url] [![npm-image]][npm-url] [![license-image]][license-url] [![typescript-image]][typescript-url]
 
-The Adonis Responsive Attachment package converts any column on your Lucid model to an image attachment data type while generating and persisting optimised responsive images from the uploaded image including the original image.
+The Adonis Responsive Attachment package allows you to generate and persist optimised responsive images from uploaded images. It integrates with AdonisJS Lucid by converting any column on your Lucid model to an image attachment data type via the `@responsiveAttachment` decorator.
 
 Adonis Responsive Attachment generates very detailed metadata of the original file and generated responsive images and persists the metadata to the `decorated` column within the database. It does not require any additional database tables and stores the file metadata as JSON within the same specified/decorated column.
 
@@ -42,6 +42,7 @@ On the frontend of your blog, you can use the `srcset` attribute of the `img` el
 - Converts images from one format to another. The following formats are supported: `jpeg`, `png`, `webp`, `tiff`, and `avif`.
 - Allows you to disable some breakpoints.
 - Allows you to disable the generation of the thumbnail image without affecting the generation of other responsive images.
+- Ability to create attachments from file buffers. This is very helpful when you want to persist images outside of the HTTP life-cycle.
 
 ## Pre-requisites
 
@@ -115,7 +116,17 @@ class Post extends BaseModel {
 }
 ```
 
-Now you can create a responsive attachment from the uploaded image as follows.
+There are two ways to create responsive attachments with the `Adonis Responsive Attachment` add-on:
+
+1. The `fromFile` static method:
+
+    The `fromFile` method allows you to create responsive images from images upload via HTTP requests. It takes one parameter which is the `file` output of the `request.file()` method
+
+2. The `fromBuffer` static method:
+
+    The `fromBuffer` method creates responsive images from (image) buffers. These images buffers can come from any source you prefer as long as they are of type `Buffer`. This allows you to create responsive images from outside the HTTP life-cycle. The `fromBuffer` method accepts on parameter which must be a `Buffer`.
+
+The example below shows the use of the `fromFile` static method.
 
 ```ts
 import { ResponsiveAttachment } from '@ioc:Adonis/Addons/ResponsiveAttachment'
@@ -131,9 +142,24 @@ class PostsController {
 }
 ```
 
-> NOTE: You should `await` the operation `ResponsiveAttachment.fromFile(coverImage)` as the uploaded image is being temporarily persisted during the `fromFile` operation. This is a bit different from the approach of the `attachment-lite` add-on.
+The example below shows the use of the `fromBuffer` static method.
 
-The `ResponsiveAttachment.fromFile` static method creates an instance of the ResponsiveAttachment class from the uploaded file. When you persist the model to the database, the `adonis-responsive-attachment` will write the file to the disk.
+```ts
+import { ResponsiveAttachment } from '@ioc:Adonis/Addons/ResponsiveAttachment'
+import { readFile } from 'fs/promises'
+class UsersController {
+  public store({ request }: HttpContextContract) {
+    const buffer = await readFile(join(__dirname, '../me.jpeg'))
+    const user = new User()
+    user.avatar = await ResponsiveAttachment.fromBuffer(buffer)
+    await user.save()
+  }
+}
+```
+
+> NOTE: You should `await` the operation `ResponsiveAttachment.fromFile(coverImage)` as the uploaded image is being temporarily persisted during the `fromFile` operation. This is a bit different from the approach of the `attachment-lite` add-on. In order to offer a uniform syntax you are required to also await the method `ResponsiveAttachment.fromBuffer`.
+
+The `ResponsiveAttachment.fromFile` or `ResponsiveAttachment.fromBuffer` static method creates an instance of the ResponsiveAttachment class from the uploaded image or provider buffer. When you persist the model to the database, the `adonis-responsive-attachment` add-on will write the file or buffer to the disk and generate optimised responsive images and thumbnails from the original image.
 
 ### Handling updates
 You can update the property with a newly image, and the package will take care of removing the old images and generating and persisting new responsive images.

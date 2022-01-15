@@ -19,6 +19,7 @@ import { getDimensions } from '../src/Helpers/ImageManipulationHelper'
 
 import { ResponsiveAttachment } from '../src/Attachment'
 import { setup, cleanup, setupApplication } from '../test-helpers'
+import { readFile } from 'fs/promises'
 
 let app: ApplicationContract
 
@@ -220,7 +221,7 @@ test.group('ResponsiveAttachment | fromFile', (group) => {
     await cleanup(app)
   })
 
-  test('create attachment from the user uploaded image', async (assert) => {
+  test('create attachment from the user-uploaded image', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
 
     const server = createServer((req, res) => {
@@ -255,7 +256,7 @@ test.group('ResponsiveAttachment | fromFile', (group) => {
     assert.isTrue(await Drive.exists(body.breakpoints?.large.name))
   })
 
-  test('change the format of the user uploaded image', async (assert) => {
+  test('change the format of the user-uploaded image', async (assert) => {
     const server = createServer((req, res) => {
       const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
       app.container.make(BodyParserMiddleware).handle(ctx, async () => {
@@ -289,7 +290,7 @@ test.group('ResponsiveAttachment | fromFile', (group) => {
       .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
   })
 
-  test('pre-compute urls for newly created images', async (assert) => {
+  test('pre-compute urls for newly-created images', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
 
     const server = createServer((req, res) => {
@@ -1062,5 +1063,267 @@ test.group('ResponsiveAttachment | Custom breakpoints', (group) => {
     await supertest(server)
       .post('/')
       .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+  })
+})
+
+test.group('ResponsiveAttachment | fromBuffer', (group) => {
+  group.before(async () => {
+    app = await setupApplication()
+    await setup(app)
+
+    app.container.resolveBinding('Adonis/Core/Route').commit()
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+  })
+
+  group.after(async () => {
+    await cleanup(app)
+  })
+
+  test('create attachment from the user-provided buffer', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const readableStream = await readFile(
+          join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg')
+        )
+        const responsiveAttachment = await ResponsiveAttachment.fromBuffer(readableStream)
+        await responsiveAttachment.save()
+
+        assert.isTrue(responsiveAttachment.isPersisted)
+        assert.isTrue(responsiveAttachment.isLocal)
+
+        assert.isTrue(await Drive.exists(responsiveAttachment?.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.thumbnail.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.small.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.medium.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.large.name!))
+
+        ctx.response.send(responsiveAttachment)
+        ctx.response.finish()
+      })
+    })
+
+    const { body } = await supertest(server).post('/')
+
+    assert.isTrue(await Drive.exists(body.name))
+  })
+
+  test('pre-compute url for newly-created images', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const readableStream = await readFile(
+          join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg')
+        )
+        const responsiveAttachment = await ResponsiveAttachment.fromBuffer(readableStream)
+        responsiveAttachment.setOptions({ preComputeUrls: true })
+        await responsiveAttachment.save()
+
+        assert.isTrue(responsiveAttachment.isPersisted)
+        assert.isTrue(responsiveAttachment.isLocal)
+
+        assert.isNotEmpty(responsiveAttachment?.urls)
+
+        assert.isDefined(responsiveAttachment?.url)
+        assert.isDefined(responsiveAttachment?.urls?.breakpoints?.large.url)
+        assert.isDefined(responsiveAttachment?.urls?.breakpoints?.medium.url)
+        assert.isDefined(responsiveAttachment?.urls?.breakpoints?.small.url)
+        assert.isDefined(responsiveAttachment?.urls?.breakpoints?.thumbnail.url)
+
+        assert.isNotNull(responsiveAttachment?.url)
+        assert.isNotNull(responsiveAttachment?.urls?.breakpoints?.large.url)
+        assert.isNotNull(responsiveAttachment?.urls?.breakpoints?.medium.url)
+        assert.isNotNull(responsiveAttachment?.urls?.breakpoints?.small.url)
+        assert.isNotNull(responsiveAttachment?.urls?.breakpoints?.thumbnail.url)
+
+        assert.isTrue(await Drive.exists(responsiveAttachment?.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.large.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.medium.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.small.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.thumbnail.name!))
+
+        assert.isTrue(
+          responsiveAttachment?.breakpoints!.thumbnail.size! <
+            responsiveAttachment?.breakpoints!.small.size!
+        )
+        assert.isTrue(
+          responsiveAttachment?.breakpoints!.small.size! <
+            responsiveAttachment?.breakpoints!.medium.size!
+        )
+        assert.isTrue(
+          responsiveAttachment?.breakpoints!.medium.size! <
+            responsiveAttachment?.breakpoints!.large.size!
+        )
+        assert.isTrue(responsiveAttachment?.breakpoints!.large.size! < responsiveAttachment?.size!)
+
+        ctx.response.send(responsiveAttachment)
+        ctx.response.finish()
+      })
+    })
+
+    const { body } = await supertest(server).post('/')
+
+    assert.isDefined(body.url)
+  })
+
+  test('delete local images', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const readableStream = await readFile(
+          join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg')
+        )
+        const responsiveAttachment = await ResponsiveAttachment.fromBuffer(readableStream)
+        responsiveAttachment.setOptions({ preComputeUrls: true })
+        await responsiveAttachment.save()
+        await responsiveAttachment.delete()
+
+        assert.isFalse(responsiveAttachment?.isPersisted)
+        assert.isTrue(responsiveAttachment?.isLocal)
+        assert.isTrue(responsiveAttachment?.isDeleted)
+
+        ctx.response.send(responsiveAttachment)
+        ctx.response.finish()
+      })
+    })
+
+    const { body } = await supertest(server).post('/')
+
+    assert.isDefined(body.url)
+    assert.isDefined(body.breakpoints.large.url)
+    assert.isDefined(body.breakpoints.medium.url)
+    assert.isDefined(body.breakpoints.small.url)
+    assert.isDefined(body.breakpoints.thumbnail.url)
+
+    assert.isNotNull(body.url)
+    assert.isNotNull(body.breakpoints.large.url)
+    assert.isNotNull(body.breakpoints.medium.url)
+    assert.isNotNull(body.breakpoints.small.url)
+    assert.isNotNull(body.breakpoints.thumbnail.url)
+
+    assert.isFalse(await Drive.exists(body.name))
+    assert.isFalse(await Drive.exists(body.breakpoints.large.name))
+    assert.isFalse(await Drive.exists(body.breakpoints.medium.name))
+    assert.isFalse(await Drive.exists(body.breakpoints.small.name))
+    assert.isFalse(await Drive.exists(body.breakpoints.thumbnail.name))
+  })
+})
+
+test.group('ResponsiveAttachment | errors', (group) => {
+  group.before(async () => {
+    app = await setupApplication()
+    await setup(app)
+
+    app.container.resolveBinding('Adonis/Core/Route').commit()
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+  })
+
+  group.after(async () => {
+    await cleanup(app)
+  })
+
+  test('throw error if unallowed file type is provided to `fromBuffer` method', async (assert) => {
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        assert.plan(1)
+
+        const readableStream = await readFile(join(__dirname, '../unallowed_file.pdf'))
+        try {
+          const responsiveAttachment = await ResponsiveAttachment.fromBuffer(readableStream)
+          ctx.response.send(responsiveAttachment)
+          ctx.response.finish()
+        } catch (error) {
+          assert.equal(
+            error.message,
+            `Uploaded file is not an allowable image. Make sure that you uploaded only the following format: "jpeg", "png", "webp", "tiff", and "avif".`
+          )
+          ctx.response.send(error)
+          ctx.response.finish()
+        }
+      })
+    })
+
+    await supertest(server).post('/')
+  })
+
+  test('throw error if unallowed file type is provided to `fromFile` method', async (assert) => {
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        assert.plan(1)
+
+        const file = ctx.request.file('avatar')!
+        try {
+          const responsiveAttachment = await ResponsiveAttachment.fromFile(file)
+          ctx.response.send(responsiveAttachment)
+          ctx.response.finish()
+        } catch (error) {
+          assert.equal(
+            error.message,
+            `Uploaded file is not an allowable image. Make sure that you uploaded only the following format: "jpeg", "png", "webp", "tiff", and "avif".`
+          )
+          ctx.response.send(error)
+          ctx.response.finish()
+        }
+      })
+    })
+
+    await supertest(server).post('/').attach('avatar', join(__dirname, '../unallowed_file.pdf'))
+  })
+
+  test('throw error if a `falsy` value is provided to `fromFile` method', async (assert) => {
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        assert.plan(1)
+
+        try {
+          const responsiveAttachment = await ResponsiveAttachment.fromFile(undefined!)
+          ctx.response.send(responsiveAttachment)
+          ctx.response.finish()
+        } catch (error) {
+          assert.equal(error.message, 'You should provide a non-falsy value')
+          ctx.response.send(error)
+          ctx.response.finish()
+        }
+      })
+    })
+
+    await supertest(server).post('/')
+  })
+
+  test('throw error if an invalid DB value is provided to `fromDbResponse` method', async (assert) => {
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        assert.plan(1)
+
+        try {
+          const responsiveAttachment = ResponsiveAttachment.fromDbResponse(
+            JSON.stringify({ names: 'name' })
+          )
+          ctx.response.send(responsiveAttachment)
+          ctx.response.finish()
+        } catch (error) {
+          assert.equal(
+            error.message,
+            `Cannot create attachment from database response. Missing attribute "name"`
+          )
+          ctx.response.send(error)
+          ctx.response.finish()
+        }
+      })
+    })
+
+    await supertest(server).post('/')
   })
 })

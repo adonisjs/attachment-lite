@@ -9,6 +9,10 @@
 
 /// <reference path="../../adonis-typings/index.ts" />
 
+import { Exception } from '@poppinss/utils'
+import { cuid } from '@poppinss/utils/build/helpers'
+import detect from 'detect-file-type'
+
 import type { MultipartFileContract } from '@ioc:Adonis/Core/BodyParser'
 import type { DriveManagerContract, ContentHeaders } from '@ioc:Adonis/Core/Drive'
 import type {
@@ -30,7 +34,6 @@ import {
   optimize,
 } from '../Helpers/ImageManipulationHelper'
 import { merge, isEmpty, assign, set } from 'lodash'
-import cuid from 'cuid'
 import { DEFAULT_BREAKPOINTS } from './decorator'
 
 // Some required attributes have been removed to improve
@@ -63,28 +66,69 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
    * file
    */
   public static async fromFile(file: MultipartFileContract) {
-    if (file) {
-      // Store the file locally first and add the path to the ImageInfo
-      // This will be removed after the operation is completed
-      await file.moveToDisk('image_upload_tmp')
+    if (!file) {
+      throw new SyntaxError('You should provide a non-falsy value')
+    }
+    // Store the file locally first and add the path to the ImageInfo
+    // This will be removed after the operation is completed
+    await file.moveToDisk('image_upload_tmp')
 
-      if (allowedFormats.includes(file?.subtype as AttachmentOptions['forceFormat']) === false) {
-        throw new RangeError(
-          `Uploaded file is not an allowable image. Make sure that you uploaded only the following format: "jpeg", "png", "webp", "tiff", and "avif".`
-        )
+    if (allowedFormats.includes(file?.subtype as AttachmentOptions['forceFormat']) === false) {
+      throw new RangeError(
+        `Uploaded file is not an allowable image. Make sure that you uploaded only the following format: "jpeg", "png", "webp", "tiff", and "avif".`
+      )
+    }
+
+    const attributes = {
+      extname: file.extname!,
+      mimeType: `${file.type}/${file.subtype}`,
+      size: file.size,
+      path: file.filePath,
+    }
+
+    return new ResponsiveAttachment(attributes)
+  }
+
+  /**
+   * Create attachment instance from the bodyparser via a buffer
+   */
+  public static fromBuffer(buffer: Buffer): Promise<ResponsiveAttachment> {
+    return new Promise((resolve, reject) => {
+      try {
+        type BufferProperty = { ext: string; mime: string }
+
+        let bufferProperty: BufferProperty | undefined
+
+        detect.fromBuffer(buffer, function (err: Error | string, result: BufferProperty) {
+          if (err) {
+            throw new Error(err instanceof Error ? err.message : err)
+          }
+          if (!result) {
+            throw new Exception('Please provide a valid file buffer')
+          }
+          bufferProperty = result
+        })
+
+        const { mime, ext } = bufferProperty!
+        const subtype = mime.split('/').pop()
+
+        if (allowedFormats.includes(subtype as AttachmentOptions['forceFormat']) === false) {
+          throw new RangeError(
+            `Uploaded file is not an allowable image. Make sure that you uploaded only the following format: "jpeg", "png", "webp", "tiff", and "avif".`
+          )
+        }
+
+        const attributes = {
+          extname: ext,
+          mimeType: mime,
+          size: buffer.length,
+        }
+
+        return resolve(new ResponsiveAttachment(attributes, buffer))
+      } catch (error) {
+        return reject(error)
       }
-
-      const attributes = {
-        extname: file.extname!,
-        mimeType: `${file.type}/${file.subtype}`,
-        size: file.size,
-        path: file.filePath,
-      }
-
-      const responsiveAttachment = new ResponsiveAttachment(attributes)
-
-      return responsiveAttachment
-    } else return null
+    })
   }
 
   /**
@@ -196,7 +240,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
    */
   public isDeleted: boolean
 
-  constructor(attributes: AttachmentAttributes) {
+  constructor(attributes: AttachmentAttributes, private buffer?: Buffer | null) {
     this.name = attributes.name
     this.size = attributes.size
     this.hash = attributes.hash
@@ -205,10 +249,10 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     this.height = attributes.height
     this.extname = attributes.extname
     this.mimeType = attributes.mimeType
-    this.url = attributes.url! || null
+    this.url = attributes.url ?? null
     this.breakpoints = attributes.breakpoints || undefined
-    this.path = attributes.path || ''
-    this.isLocal = !!this.path
+    this.path = attributes.path ?? ''
+    this.isLocal = !!this.path || !!this.buffer
     this.urls = null
   }
 
@@ -263,7 +307,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
 
   protected async enhanceFile(): Promise<ImageInfo> {
     // Read the image as a buffer using `Drive.get()`
-    const originalFileBuffer = await this.getDisk().get(this.path!)
+    const originalFileBuffer = this.buffer ?? (await this.getDisk().get(this.path!))
 
     // Optimise the image buffer and return the optimised buffer
     // and the info of the image
@@ -302,6 +346,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
       options: this.options,
       prefix: 'original',
     })
+
     /**
      * Update the local attributes with the attributes
      * of the optimised original file
@@ -394,7 +439,9 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     /**
      * Delete the temporary file
      */
-    await this.getDisk().delete(this.path!)
+    if (this.buffer) {
+      this.buffer = null
+    } else await this.getDisk().delete(this.path!)
 
     return merge(enhancedImageData, this.urls)
   }
