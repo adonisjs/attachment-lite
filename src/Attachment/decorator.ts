@@ -218,6 +218,7 @@ export const responsiveAttachment: ResponsiveAttachmentDecorator = (options) => 
     const {
       disk,
       folder,
+      keepOriginal = true,
       preComputeUrls = false,
       breakpoints = DEFAULT_BREAKPOINTS,
       forceFormat,
@@ -242,6 +243,7 @@ export const responsiveAttachment: ResponsiveAttachmentDecorator = (options) => 
       options: {
         disk,
         folder,
+        keepOriginal,
         preComputeUrls,
         breakpoints,
         forceFormat,

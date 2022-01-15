@@ -31,6 +31,7 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
   export type AttachmentOptions = {
     disk?: keyof DisksList
     folder?: string
+    keepOriginal?: boolean
     breakpoints?: Breakpoints
     forceFormat?: 'jpeg' | 'png' | 'webp' | 'avif' | 'tiff'
     optimizeSize?: boolean
@@ -46,60 +47,60 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
     /**
      * The name is available only when "isPersisted" is true.
      */
-    name: string
+    name?: string
 
     /**
      * The url is available only when "isPersisted" is true.
      */
-    url: string | null
+    url?: string
 
     /**
      * The file size in bytes
      */
-    size: number
+    size?: number
 
     /**
      * The file extname. Inferred from the BodyParser file extname
      * property
      */
-    extname: string
+    extname?: string
 
     /**
      * The file mimetype.
      */
-    mimeType: string
+    mimeType?: string
 
     /**
      * The hash string of the image
      */
-    hash: string
+    hash?: string
 
     /**
      * The width of the image
      */
-    width: number
+    width?: number
 
     /**
      * The height of the image
      */
-    height: number
+    height?: number
 
     /**
      * The format of the image
      */
-    format: AttachmentOptions['forceFormat']
+    format?: AttachmentOptions['forceFormat']
 
     /**
      * The breakpoints object for the image
      */
-    breakpoints: ImageBreakpoints | undefined
+    breakpoints?: Record<keyof ImageBreakpoints, ImageInfo>
   }
 
   /**
    * Attachment class represents an attachment data type
    * for Lucid models
    */
-  export interface ResponsiveAttachmentContract {
+  export interface ResponsiveAttachmentContract extends ImageAttributes {
     /**
      * The breakpoint objects
      */
@@ -157,12 +158,12 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
      */
     getUrls(
       signingOptions?: ContentHeaders & { expiresIn?: string | number }
-    ): Promise<UrlRecords | null>
+    ): Promise<UrlRecords | undefined>
 
     /**
      * Attachment attributes
      */
-    toJSON(): (AttachmentAttributes & { url?: string | null }) | null
+    toJSON(): (AttachmentAttributes & { url?: string | undefined }) | null
   }
 
   /**
