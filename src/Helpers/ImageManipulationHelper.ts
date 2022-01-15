@@ -141,7 +141,7 @@ export const generateName = function ({
   prefix,
   options,
 }: {
-  extname: string
+  extname?: string
   hash?: string
   prefix?: keyof ImageBreakpoints | 'original'
   options?: AttachmentOptions

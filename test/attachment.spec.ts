@@ -313,12 +313,6 @@ test.group('ResponsiveAttachment | fromFile', (group) => {
         assert.isDefined(responsiveAttachment?.urls?.breakpoints?.small.url)
         assert.isDefined(responsiveAttachment?.urls?.breakpoints?.thumbnail.url)
 
-        assert.isNotNull(responsiveAttachment?.url)
-        assert.isNotNull(responsiveAttachment?.urls?.breakpoints?.large.url)
-        assert.isNotNull(responsiveAttachment?.urls?.breakpoints?.medium.url)
-        assert.isNotNull(responsiveAttachment?.urls?.breakpoints?.small.url)
-        assert.isNotNull(responsiveAttachment?.urls?.breakpoints?.thumbnail.url)
-
         assert.isTrue(await Drive.exists(responsiveAttachment?.name!))
         assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.large.name!))
         assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.medium.name!))
@@ -1300,30 +1294,124 @@ test.group('ResponsiveAttachment | errors', (group) => {
 
     await supertest(server).post('/')
   })
+})
 
-  test('throw error if an invalid DB value is provided to `fromDbResponse` method', async (assert) => {
+test.group('Do not generate save original image when `options.keepOriginal` is false', (group) => {
+  group.before(async () => {
+    app = await setupApplication()
+    await setup(app)
+
+    app.container.resolveBinding('Adonis/Core/Route').commit()
+    ResponsiveAttachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+  })
+
+  group.after(async () => {
+    await cleanup(app)
+  })
+
+  test('create attachment from the user uploaded image', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+
     const server = createServer((req, res) => {
       const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
       app.container.make(BodyParserMiddleware).handle(ctx, async () => {
-        assert.plan(1)
+        const file = ctx.request.file('avatar')!
+        const responsiveAttachment = await ResponsiveAttachment.fromFile(file)
+        responsiveAttachment?.setOptions({ keepOriginal: false })
+        await responsiveAttachment?.save()
 
-        try {
-          const responsiveAttachment = ResponsiveAttachment.fromDbResponse(
-            JSON.stringify({ names: 'name' })
-          )
-          ctx.response.send(responsiveAttachment)
-          ctx.response.finish()
-        } catch (error) {
-          assert.equal(
-            error.message,
-            `Cannot create attachment from database response. Missing attribute "name"`
-          )
-          ctx.response.send(error)
-          ctx.response.finish()
-        }
+        assert.isTrue(responsiveAttachment?.isPersisted)
+        assert.isTrue(responsiveAttachment?.isLocal)
+
+        assert.isUndefined(responsiveAttachment?.name)
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.thumbnail.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.small.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.medium.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.large.name!))
+
+        ctx.response.send(responsiveAttachment)
+        ctx.response.finish()
       })
     })
 
-    await supertest(server).post('/')
+    const { body } = await supertest(server)
+      .post('/')
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+
+    assert.notExists(body.name)
+    assert.notExists(body.size)
+    assert.notExists(body.hash)
+    assert.notExists(body.width)
+    assert.notExists(body.format)
+    assert.notExists(body.height)
+    assert.notExists(body.extname)
+    assert.notExists(body.mimeType)
+    assert.notExists(body.url)
+  })
+
+  test('pre-compute urls for newly-created images', async (assert) => {
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const file = ctx.request.file('avatar')!
+        const responsiveAttachment = await ResponsiveAttachment.fromFile(file)
+        responsiveAttachment?.setOptions({
+          preComputeUrls: true,
+          keepOriginal: false,
+        })
+        await responsiveAttachment?.save()
+
+        assert.isTrue(responsiveAttachment?.isPersisted)
+        assert.isTrue(responsiveAttachment?.isLocal)
+
+        assert.isNotEmpty(responsiveAttachment?.urls)
+
+        assert.isUndefined(responsiveAttachment?.url)
+        assert.isUndefined(responsiveAttachment?.name!)
+
+        assert.isDefined(responsiveAttachment?.urls?.breakpoints?.large.url)
+        assert.isDefined(responsiveAttachment?.urls?.breakpoints?.medium.url)
+        assert.isDefined(responsiveAttachment?.urls?.breakpoints?.small.url)
+        assert.isDefined(responsiveAttachment?.urls?.breakpoints?.thumbnail.url)
+
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.large.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.medium.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.small.name!))
+        assert.isTrue(await Drive.exists(responsiveAttachment?.breakpoints?.thumbnail.name!))
+
+        assert.isTrue(
+          responsiveAttachment?.breakpoints!.thumbnail.size! <
+            responsiveAttachment?.breakpoints!.small.size!
+        )
+        assert.isTrue(
+          responsiveAttachment?.breakpoints!.small.size! <
+            responsiveAttachment?.breakpoints!.medium.size!
+        )
+        assert.isTrue(
+          responsiveAttachment?.breakpoints!.medium.size! <
+            responsiveAttachment?.breakpoints!.large.size!
+        )
+
+        ctx.response.send(responsiveAttachment)
+        ctx.response.finish()
+      })
+    })
+
+    const { body } = await supertest(server)
+      .post('/')
+      .attach('avatar', join(__dirname, '../Statue-of-Sardar-Vallabhbhai-Patel-1500x1000.jpg'))
+
+    assert.notExists(body.name)
+    assert.notExists(body.size)
+    assert.notExists(body.hash)
+    assert.notExists(body.width)
+    assert.notExists(body.format)
+    assert.notExists(body.height)
+    assert.notExists(body.extname)
+    assert.notExists(body.mimeType)
+    assert.notExists(body.url)
   })
 })

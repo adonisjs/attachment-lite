@@ -159,7 +159,7 @@ class UsersController {
 
 > NOTE: You should `await` the operation `ResponsiveAttachment.fromFile(coverImage)` as the uploaded image is being temporarily persisted during the `fromFile` operation. This is a bit different from the approach of the `attachment-lite` add-on. In order to offer a uniform syntax you are required to also await the method `ResponsiveAttachment.fromBuffer`.
 
-The `ResponsiveAttachment.fromFile` or `ResponsiveAttachment.fromBuffer` static method creates an instance of the ResponsiveAttachment class from the uploaded image or provider buffer. When you persist the model to the database, the `adonis-responsive-attachment` add-on will write the file or buffer to the disk and generate optimised responsive images and thumbnails from the original image.
+The `ResponsiveAttachment.fromFile` or `ResponsiveAttachment.fromBuffer` static method creates an instance of the `ResponsiveAttachment` class from the uploaded image or provider buffer. When you persist the model to the database, the `adonis-responsive-attachment` add-on will write the file or buffer to the disk and generate optimised responsive images and thumbnails from the original image.
 
 ### Handling updates
 You can update the property with a newly image, and the package will take care of removing the old images and generating and persisting new responsive images.
@@ -224,6 +224,7 @@ The `responsiveAttachment` decorator accepts the following options:
 7. `responsiveDimensions` - boolean,
 8. `preComputeUrls` - boolean,
 9. `disableThumbnail` - boolean.
+10. `keepOriginal` - boolean.
 
 Let's discuss these options
 
@@ -399,6 +400,31 @@ post.coverImage.breakpoints.medium.name // exists
 post.coverImage.breakpoints.large.name // exists
 
 post.coverImage.breakpoints.thumbnail // does not exist
+```
+
+### 10. The `keepOriginal` Option
+
+The `keepOriginal` option allows you to decide whether to keep the original uploaded image or not. If you do not have any need for the original image in the future, there should be no need to keep it. By default `keepOriginal` is `true` but you can disable it by setting it to `false`.
+
+```ts
+class Post extends BaseModel {
+  @responsiveAttachment({keepOriginal: false})
+  public coverImage: ResponsiveAttachmentContract
+}
+
+const post = await Post.findOrFail(1)
+post.coverImage.name // does not exist
+post.coverImage.hash // does not exist
+post.coverImage.width // does not exist
+post.coverImage.format // does not exist
+post.coverImage.height // does not exist
+post.coverImage.extname // does not exist
+post.coverImage.mimeType // does not exist
+
+post.coverImage.breakpoints.small.name // exists
+post.coverImage.breakpoints.medium.name // exists
+post.coverImage.breakpoints.large.name // exists
+post.coverImage.breakpoints.thumbnail.name // exists
 ```
 
 ## Generating URLs

@@ -18,11 +18,11 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
   export type ImageInfo = {
     name?: string
     hash?: string
-    extname: string
-    mimeType: string
-    size: number
-    path?: string | null
-    buffer?: Buffer | null
+    extname?: string
+    mimeType?: string
+    size?: number
+    path?: string
+    buffer?: Buffer
     width?: number
     height?: number
     /**
@@ -30,8 +30,8 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
      * to different file types/formats
      */
     format?: AttachmentOptions['forceFormat']
-    breakpoints?: ImageBreakpoints | null
-    url?: string | null
+    breakpoints?: Record<keyof ImageBreakpoints, ImageInfo>
+    url?: string
   }
 
   export type ImageData = {
@@ -56,8 +56,8 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
   }
 
   export type ImageDimensions = {
-    width: number | undefined
-    height: number | undefined
+    width?: number
+    height?: number
   }
 
   export type BreakpointFormat = ({ key: keyof ImageBreakpoints } & { file: ImageInfo }) | null
@@ -70,12 +70,12 @@ declare module '@ioc:Adonis/Addons/ResponsiveAttachment' {
   }
 
   export type UrlRecords = {
-    url: string | null
-    breakpoints: Record<keyof ImageBreakpoints, { url: string | null }>
+    url?: string
+    breakpoints?: Record<keyof ImageBreakpoints, { url?: string }>
   }
 
   export type NameRecords = {
-    name: string
-    breakpoints: Record<keyof ImageBreakpoints, { name: string }>
+    name?: string
+    breakpoints?: Record<keyof ImageBreakpoints, { name?: string }>
   }
 }

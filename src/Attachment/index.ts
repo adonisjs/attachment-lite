@@ -36,10 +36,6 @@ import {
 import { merge, isEmpty, assign, set } from 'lodash'
 import { DEFAULT_BREAKPOINTS } from './decorator'
 
-// Some required attributes have been removed to improve
-// compatibility with the `attachment-lite` add-on
-const REQUIRED_ATTRIBUTES = ['name', 'size', 'extname', 'mimeType']
-
 /**
  * Attachment class represents an attachment data type
  * for Lucid models
@@ -86,13 +82,13 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
       path: file.filePath,
     }
 
-    return new ResponsiveAttachment(attributes)
+    return new ResponsiveAttachment(attributes) as ResponsiveAttachmentContract
   }
 
   /**
    * Create attachment instance from the bodyparser via a buffer
    */
-  public static fromBuffer(buffer: Buffer): Promise<ResponsiveAttachment> {
+  public static fromBuffer(buffer: Buffer): Promise<ResponsiveAttachmentContract> {
     return new Promise((resolve, reject) => {
       try {
         type BufferProperty = { ext: string; mime: string }
@@ -124,7 +120,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
           size: buffer.length,
         }
 
-        return resolve(new ResponsiveAttachment(attributes, buffer))
+        return resolve(new ResponsiveAttachment(attributes, buffer) as ResponsiveAttachmentContract)
       } catch (error) {
         return reject(error)
       }
@@ -136,20 +132,9 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
    */
   public static fromDbResponse(response: string | ImageAttributes) {
     const attributes =
-      typeof response === 'string' ? (JSON.parse(response) as ImageAttributes) : response
+      typeof response === 'string' ? (JSON.parse(response) as ResponsiveAttachment) : response
 
     if (!attributes) return null
-
-    /**
-     * Validate the db response
-     */
-    REQUIRED_ATTRIBUTES.forEach((attribute) => {
-      if (attributes[attribute] === undefined) {
-        throw new RangeError(
-          `Cannot create attachment from database response. Missing attribute "${attribute}"`
-        )
-      }
-    })
 
     const attachment = new ResponsiveAttachment(attributes)
 
@@ -175,34 +160,34 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
    * The generated url of the original file.
    * Available only when "isPersisted" is true.
    */
-  public url?: string | null
+  public url?: string
 
   /**
    * The urls of the original and breakpoint files.
    * Available only when "isPersisted" is true.
    */
-  public urls: UrlRecords | null
+  public urls?: UrlRecords
 
   /**
    * The image size of the original file in bytes
    */
-  public size?: number | undefined
+  public size?: number
 
   /**
    * The image extname. Inferred from the bodyparser file extname
    * property
    */
-  public extname?: string | undefined
+  public extname?: string
 
   /**
    * The image mimetype.
    */
-  public mimeType?: string | undefined
+  public mimeType?: string
 
   /**
    * The image hash.
    */
-  public hash?: string | undefined
+  public hash?: string
 
   /**
    * The image width.
@@ -223,12 +208,12 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
   /**
    * The format or filetype of the image.
    */
-  public format: AttachmentOptions['forceFormat'] | undefined
+  public format?: AttachmentOptions['forceFormat']
 
   /**
    * The format or filetype of the image.
    */
-  public breakpoints: ImageBreakpoints | undefined
+  public breakpoints?: Record<keyof ImageBreakpoints, ImageInfo>
 
   /**
    * Find if the image has been persisted or not.
@@ -249,11 +234,10 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     this.height = attributes.height
     this.extname = attributes.extname
     this.mimeType = attributes.mimeType
-    this.url = attributes.url ?? null
-    this.breakpoints = attributes.breakpoints || undefined
+    this.url = attributes.url ?? undefined
+    this.breakpoints = attributes.breakpoints ?? undefined
     this.path = attributes.path ?? ''
     this.isLocal = !!this.path || !!this.buffer
-    this.urls = null
   }
 
   public get attributes() {
@@ -294,6 +278,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     this.options = merge(
       {
         preComputeUrls: false,
+        keepOriginal: true,
         breakpoints: DEFAULT_BREAKPOINTS,
         forceFormat: undefined,
         optimizeOrientation: true,
@@ -340,24 +325,29 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     /**
      * Generate the name of the original image
      */
-    this.name = generateName({
-      extname: enhancedImageData.extname,
-      hash: enhancedImageData.hash,
-      options: this.options,
-      prefix: 'original',
-    })
+    this.name =
+      this.options?.keepOriginal ?? true
+        ? generateName({
+            extname: enhancedImageData.extname,
+            hash: enhancedImageData.hash,
+            options: this.options,
+            prefix: 'original',
+          })
+        : undefined
 
     /**
      * Update the local attributes with the attributes
      * of the optimised original file
      */
-    this.size = enhancedImageData.size
-    this.hash = enhancedImageData.hash
-    this.width = enhancedImageData.width
-    this.format = enhancedImageData.format
-    this.height = enhancedImageData.height
-    this.extname = enhancedImageData.extname
-    this.mimeType = enhancedImageData.mimeType
+    if (this.options?.keepOriginal ?? true) {
+      this.size = enhancedImageData.size
+      this.hash = enhancedImageData.hash
+      this.width = enhancedImageData.width
+      this.height = enhancedImageData.height
+      this.format = enhancedImageData.format
+      this.extname = enhancedImageData.extname
+      this.mimeType = enhancedImageData.mimeType
+    }
 
     /**
      * Inject the name into the `ImageInfo`
@@ -367,8 +357,9 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     /**
      * Write the optimised original image to the disk
      */
-    await this.getDisk().put(enhancedImageData.name!, enhancedImageData.buffer!)
-    //await this.file!.moveToDisk('./', { name: this.name }, this.options?.disk)
+    if (this.options?.keepOriginal ?? true) {
+      await this.getDisk().put(enhancedImageData.name!, enhancedImageData.buffer!)
+    }
 
     /**
      * Generate image thumbnail data
@@ -457,7 +448,7 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
     /**
      * Delete the original image
      */
-    await this.getDisk().delete(this.name!)
+    if (this.options?.keepOriginal ?? true) await this.getDisk().delete(this.name!)
     /**
      * Delete the responsive images
      */
@@ -528,14 +519,18 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
 
         const value = attachmentData[key]
         let url: string
+
         if (key === 'name') {
+          if (!(this.options?.keepOriginal ?? true)) continue
           const name = value as string
+
           const imageVisibility = await disk.getVisibility(name)
           if (imageVisibility === 'private') {
             url = await disk.getSignedUrl(name, signedUrlOptions || undefined)
           } else {
             url = await disk.getUrl(name)
           }
+
           this.urls['url'] = url
           this.url = url
         } else if (key === 'breakpoints') {
@@ -580,10 +575,11 @@ export class ResponsiveAttachment implements ResponsiveAttachmentContract {
    * Serialize attachment instance to JSON
    */
   public toJSON() {
-    const { path, ...originalAttributes } = this.attributes
+    const { path, url, ...originalAttributes } = this.attributes
 
     return {
-      ...originalAttributes,
+      ...(this.options?.keepOriginal ?? true ? originalAttributes : {}),
+      ...(url ? { url } : {}),
       breakpoints: this.breakpoints,
     }
   }
