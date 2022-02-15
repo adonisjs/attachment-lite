@@ -169,7 +169,7 @@ import { ResponsiveAttachment } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 
 class PostsController {
   public update({ request }: HttpContextContract) {
-    const post = await Post.firstOrFail(1)
+    const post = await Post.firstOrFail()
     const coverImage = request.file('coverImage')!
 
     post.coverImage = coverImage ? await ResponsiveAttachment.fromFile(coverImage) : null
@@ -190,7 +190,7 @@ class UsersController {
   public store() {
     const buffer = await readFile(join(__dirname, '../me.jpeg'))
 
-    const user = await User.firstOrFail(1)
+    const user = await User.firstOrFail()
     user.avatar = buffer ? await ResponsiveAttachment.fromBuffer(buffer) : null
 
     // Old file will be removed from the disk as well.
