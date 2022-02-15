@@ -124,7 +124,7 @@ There are two ways to create responsive attachments with the `Adonis Responsive 
 
 2. The `fromBuffer` static method:
 
-    The `fromBuffer` method creates responsive images from (image) buffers. These images buffers can come from any source you prefer as long as they are of type `Buffer`. This allows you to create responsive images from outside the HTTP life-cycle. The `fromBuffer` method accepts on parameter which must be a `Buffer`.
+    The `fromBuffer` method creates responsive images from (image) buffers. These images buffers can come from any source you prefer as long as they are of type `Buffer`. This allows you to create responsive images from outside the HTTP life-cycle. The `fromBuffer` method accepts one parameter which must be a `Buffer`.
 
 The example below shows the use of the `fromFile` static method.
 
@@ -148,7 +148,7 @@ The example below shows the use of the `fromBuffer` static method.
 import { ResponsiveAttachment } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 import { readFile } from 'fs/promises'
 class UsersController {
-  public store({ request }: HttpContextContract) {
+  public store() {
     const buffer = await readFile(join(__dirname, '../me.jpeg'))
     const user = new User()
     user.avatar = await ResponsiveAttachment.fromBuffer(buffer)
@@ -169,13 +169,32 @@ import { ResponsiveAttachment } from '@ioc:Adonis/Addons/ResponsiveAttachment'
 
 class PostsController {
   public update({ request }: HttpContextContract) {
-    const post = await Post.firstOrFail()
+    const post = await Post.firstOrFail(1)
     const coverImage = request.file('coverImage')!
 
     post.coverImage = coverImage ? await ResponsiveAttachment.fromFile(coverImage) : null
 
     // Old file will be removed from the disk as well.
     await post.save()
+  }
+}
+```
+
+Or using the `fromBuffer` method:
+
+```ts
+import { ResponsiveAttachment } from '@ioc:Adonis/Addons/ResponsiveAttachment'
+import { readFile } from 'fs/promises'
+
+class UsersController {
+  public store() {
+    const buffer = await readFile(join(__dirname, '../me.jpeg'))
+
+    const user = await User.firstOrFail(1)
+    user.avatar = buffer ? await ResponsiveAttachment.fromBuffer(buffer) : null
+
+    // Old file will be removed from the disk as well.
+    await user.save()
   }
 }
 ```
@@ -288,13 +307,16 @@ If you need to customise the `breakpoints` options, you need to overwrite the de
 
 ```ts
 class Post extends BaseModel {
-  @responsiveAttachment({
-  xlarge: 1400, // This is a custom/extra breakpoint
-  large: 1050, // Make sure you overwrite `large`
-  medium: 800, // Make sure you overwrite `medium`
-  small: 550, // Make sure you overwrite `small`
-}
-)
+  @responsiveAttachment(
+    { 
+      breakpoints: {
+        xlarge: 1400, // This is a custom/extra breakpoint
+        large: 1050, // Make sure you overwrite `large`
+        medium: 800, // Make sure you overwrite `medium`
+        small: 550, // Make sure you overwrite `small`
+      }
+    }
+  )
   public coverImage: ResponsiveAttachmentContract
 }
 
@@ -311,12 +333,15 @@ You can also choose to cherry-pick which breakpoint image you want to generate
 
 ```ts
 class Post extends BaseModel {
-  @responsiveAttachment({
-  large: 'off', // Disable the `large` breakpoint
-  medium: 'off', // Disable the `medium` breakpoint
-  small: 550, // Make you overwrite `small`
-}
-)
+  @responsiveAttachment(
+    {
+      breakpoints: {
+        large: 'off', // Disable the `large` breakpoint
+        medium: 'off', // Disable the `medium` breakpoint
+        small: 550, // Make you overwrite `small`
+      }
+    }
+  )
   public coverImage: ResponsiveAttachmentContract
 }
 
@@ -341,6 +366,58 @@ class Post extends BaseModel {
 ```
 
 This will persist the original image and generated responsive images in the `webp` format.
+
+```js
+{
+  name: 'original_ckw5lpv7v0002egvobe1b0oav.webp',
+  size: 291.69,
+  hash: 'ckw5lpv7v0002egvobe1b0oav',
+  width: 1500,
+  format: 'webp',
+  height: 1000,
+  extname: 'webp',
+  mimeType: 'image/webp',
+  url: null,
+  breakpoints: {
+    thumbnail: {
+      name: 'thumbnail_ckw5lpv7v0002egvobe1b0oav.webp',
+      hash: 'ckw5lpv7v0002egvobe1b0oav',
+      extname: 'webp',
+      mimeType: 'image/webp',
+      width: 234,
+      height: 156,
+      size: 7.96,
+    },
+    large: {
+      name: 'large_ckw5lpv7v0002egvobe1b0oav.webp',
+      hash: 'ckw5lpv7v0002egvobe1b0oav',
+      extname: 'webp',
+      mimeType: 'image/webp',
+      width: 1000,
+      height: 667,
+      size: 129.15,
+    },
+    medium: {
+      name: 'medium_ckw5lpv7v0002egvobe1b0oav.webp',
+      hash: 'ckw5lpv7v0002egvobe1b0oav',
+      extname: 'webp',
+      mimeType: 'image/webp',
+      width: 750,
+      height: 500,
+      size: 71.65,
+    },
+    small: {
+      name: 'small_ckw5lpv7v0002egvobe1b0oav.webp',
+      hash: 'ckw5lpv7v0002egvobe1b0oav',
+      extname: 'webp',
+      mimeType: 'image/webp',
+      width: 500,
+      height: 333,
+      size: 32.21,
+    },
+  },
+}
+```
 
 ### 5. The `optimizeSize` Option
 

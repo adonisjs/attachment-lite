@@ -31,7 +31,12 @@
     "adonis-responsive-attachment",
     "image-attachment",
     "image-manipulation",
-    "responsive-images"
+    "responsive-images",
+    "responsive-image",
+    "resize-images",
+    "optimize-images",
+    "image",
+    "sharp"
   ],
   "author": "Ndianabasi Udonkang",
   "license": "MIT",
