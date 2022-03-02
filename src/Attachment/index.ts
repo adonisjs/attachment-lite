@@ -61,6 +61,10 @@ export class Attachment implements AttachmentContract {
    * Create attachment instance from the database response
    */
   public static fromDbResponse(response: any) {
+    if (response === null) {
+      return null
+    }
+
     const attributes = typeof response === 'string' ? JSON.parse(response) : response
 
     /**

@@ -44,8 +44,8 @@ test.group('Attachment | fromDbResponse', (group) => {
       })
     )
 
-    assert.isTrue(attachment.isPersisted)
-    assert.isFalse(attachment.isLocal)
+    assert.isTrue(attachment?.isPersisted)
+    assert.isFalse(attachment?.isLocal)
   })
 
   test('save method should result in noop when attachment is created from db response', async (assert) => {
@@ -58,8 +58,13 @@ test.group('Attachment | fromDbResponse', (group) => {
       })
     )
 
-    await attachment.save()
-    assert.equal(attachment.name, 'foo.jpg')
+    await attachment?.save()
+    assert.equal(attachment?.name, 'foo.jpg')
+  })
+
+  test('Attachment should be null when db response is null', async (assert) => {
+    const attachment = Attachment.fromDbResponse(null)
+    assert.isNull(attachment)
   })
 
   test('delete persisted file', async (assert) => {
@@ -72,8 +77,8 @@ test.group('Attachment | fromDbResponse', (group) => {
       })
     )
 
-    await attachment.delete()
-    assert.isTrue(attachment.isDeleted)
+    await attachment?.delete()
+    assert.isTrue(attachment?.isDeleted)
   })
 
   test('compute file url', async (assert) => {
@@ -86,10 +91,10 @@ test.group('Attachment | fromDbResponse', (group) => {
       })
     )
 
-    attachment.setOptions({ preComputeUrl: true })
+    attachment?.setOptions({ preComputeUrl: true })
 
-    await attachment.computeUrl()
-    assert.match(attachment.url, /\/uploads\/foo\.jpg\?signature=/)
+    await attachment?.computeUrl()
+    assert.match(attachment?.url!, /\/uploads\/foo\.jpg\?signature=/)
   })
 
   test('compute file url from a custom method', async (assert) => {
@@ -102,14 +107,14 @@ test.group('Attachment | fromDbResponse', (group) => {
       })
     )
 
-    attachment.setOptions({
+    attachment?.setOptions({
       preComputeUrl: async (_, file) => {
         return `/${file.name}`
       },
     })
 
-    await attachment.computeUrl()
-    assert.equal(attachment.url, '/foo.jpg')
+    await attachment?.computeUrl()
+    assert.equal(attachment?.url, '/foo.jpg')
   })
 })
 
