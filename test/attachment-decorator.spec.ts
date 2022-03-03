@@ -1172,6 +1172,44 @@ test.group('@attachment | find', (group) => {
     assert.isTrue(await Drive.exists(body.avatar.name))
   })
 
+  test('Attachment response should be null when column value is null', async (assert) => {
+    const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
+    const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
+
+    class User extends BaseModel {
+      @column({ isPrimary: true })
+      public id: string
+
+      @column()
+      public username: string
+
+      @attachment({ preComputeUrl: true })
+      public avatar: AttachmentContract | null
+    }
+
+    const server = createServer((req, res) => {
+      const ctx = HttpContext.create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const file = ctx.request.file('avatar')!
+
+        let user = new User()
+        user.username = 'virk'
+        user.avatar = file ? Attachment.fromFile(file) : null
+        await user.save()
+
+        user = await User.firstOrFail()
+
+        ctx.response.send(user)
+        ctx.response.finish()
+      })
+    })
+
+    const { body } = await supertest(server).post('/')
+
+    assert.isNull(body.avatar)
+  })
+
   test('do not pre compute when preComputeUrl is not enabled', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
@@ -1278,6 +1316,43 @@ test.group('@attachment | fetch', (group) => {
     assert.isTrue(await Drive.exists(body.avatar.name))
   })
 
+  test('Attachment response should be null when column value is null', async (assert) => {
+    const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
+    const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
+
+    class User extends BaseModel {
+      @column({ isPrimary: true })
+      public id: string
+
+      @column()
+      public username: string
+
+      @attachment({ preComputeUrl: true })
+      public avatar: AttachmentContract | null
+    }
+
+    const server = createServer((req, res) => {
+      const ctx = HttpContext.create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        await Promise.all(
+          ['virk', 'ndianabasi'].map((username) => User.firstOrCreate({ username }))
+        )
+
+        const users = await User.all()
+
+        ctx.response.send(users)
+        ctx.response.finish()
+      })
+    })
+
+    await supertest(server).post('/')
+    const { body } = await supertest(server).post('/')
+
+    assert.isNull(body[0].avatar)
+    assert.isNull(body[1].avatar)
+  })
+
   test('do not pre compute when preComputeUrl is not enabled', async (assert) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
@@ -1382,6 +1457,42 @@ test.group('@attachment | paginate', (group) => {
     assert.isDefined(body.avatar.url)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
+  })
+
+  test('Attachment response should be null when column value is null', async (assert) => {
+    const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
+    const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
+
+    class User extends BaseModel {
+      @column({ isPrimary: true })
+      public id: string
+
+      @column()
+      public username: string
+
+      @attachment({ preComputeUrl: true })
+      public avatar: AttachmentContract | null
+    }
+
+    const server = createServer((req, res) => {
+      const ctx = HttpContext.create('/', {}, req, res)
+
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        await Promise.all(
+          ['virk', 'ndianabasi'].map((username) => User.firstOrCreate({ username }))
+        )
+
+        const users = await User.query().paginate(1)
+
+        ctx.response.send(users)
+        ctx.response.finish()
+      })
+    })
+
+    const { body } = await supertest(server).post('/')
+
+    assert.isNull(body.data[0].avatar)
+    assert.isNull(body.data[1].avatar)
   })
 
   test('do not pre compute when preComputeUrl is not enabled', async (assert) => {
