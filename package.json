@@ -41,8 +41,8 @@
   "author": "Ndianabasi Udonkang",
   "license": "MIT",
   "devDependencies": {
-    "@adonisjs/core": "^5.3.4",
-    "@adonisjs/lucid": "^16.3.2",
+    "@adonisjs/core": "^5.4.2",
+    "@adonisjs/lucid": "^17.1.1",
     "@adonisjs/mrm-preset": "^4.1.2",
     "@adonisjs/require-ts": "^2.0.8",
     "@poppinss/dev-utils": "^1.1.5",
