@@ -183,14 +183,14 @@ export class Attachment implements AttachmentContract {
     }
 
     /**
-     * Assign name to the file
-     */
-    this.name = this.generateName()
-
-    /**
      * Write to the disk
      */
-    await this.file!.moveToDisk('./', { name: this.name }, this.options?.disk)
+    await this.file!.moveToDisk('./', { name: this.generateName() }, this.options?.disk)
+
+    /**
+     * Assign name to the file
+     */
+    this.name = this.file!.fileName!
 
     /**
      * File has been persisted

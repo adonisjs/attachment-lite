@@ -155,6 +155,32 @@ test.group('Attachment | fromFile', (group) => {
     assert.isTrue(await Drive.exists(body.name))
   })
 
+  test('store attachment inside a nested folder', async (assert) => {
+    const server = createServer((req, res) => {
+      const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
+      app.container.make(BodyParserMiddleware).handle(ctx, async () => {
+        const file = ctx.request.file('avatar')!
+        const attachment = Attachment.fromFile(file)
+        attachment.setOptions({ folder: 'users/avatars' })
+        await attachment.save()
+
+        assert.isTrue(attachment.isPersisted)
+        assert.isTrue(attachment.isLocal)
+
+        ctx.response.send(attachment)
+        ctx.response.finish()
+      })
+    })
+
+    const { body } = await supertest(server)
+      .post('/')
+      .attach('avatar', join(__dirname, '../cat.jpeg'))
+
+    const Drive = app.container.resolveBinding('Adonis/Core/Drive')
+    assert.isTrue(body.name.startsWith('users/avatars'))
+    assert.isTrue(await Drive.exists(body.name))
+  })
+
   test('pre compute url for newly created file', async (assert) => {
     const server = createServer((req, res) => {
       const ctx = app.container.resolveBinding('Adonis/Core/HttpContext').create('/', {}, req, res)
