@@ -33,7 +33,7 @@
   "author": "virk,adonisjs",
   "license": "MIT",
   "devDependencies": {
-    "@adonisjs/core": "^5.7.2",
+    "@adonisjs/core": "^5.7.3",
     "@adonisjs/lucid": "^17.2.0",
     "@adonisjs/mrm-preset": "^5.0.3",
     "@adonisjs/require-ts": "^2.0.11",
@@ -44,7 +44,7 @@
     "commitizen": "^4.2.4",
     "cz-conventional-changelog": "^3.3.0",
     "del-cli": "^4.0.1",
-    "eslint": "^8.12.0",
+    "eslint": "^8.13.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-adonis": "^2.1.0",
     "eslint-plugin-prettier": "^4.0.0",
@@ -80,7 +80,7 @@
   },
   "homepage": "https://github.com/adonisjs/attachment-lite#readme",
   "dependencies": {
-    "@poppinss/utils": "^4.0.3"
+    "@poppinss/utils": "^4.0.4"
   },
   "adonisjs": {
     "types": "@adonisjs/attachment-lite",
