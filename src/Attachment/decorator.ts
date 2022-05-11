@@ -218,6 +218,7 @@ export const attachment: AttachmentDecorator = (options) => {
       ...columnOptions,
       consume: (value) => (value ? Attachment.fromDbResponse(value) : null),
       prepare: (value) => (value ? JSON.stringify(value) : null),
+      serialize: (value) => (value ? value.toJSON() : null),
     })
 
     /**
