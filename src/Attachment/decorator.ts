@@ -217,7 +217,7 @@ export const attachment: AttachmentDecorator = (options) => {
     Model.$addColumn(property, {
       ...columnOptions,
       consume: (value) => (value ? Attachment.fromDbResponse(value) : null),
-      prepare: (value) => (value ? JSON.stringify(value) : null),
+      prepare: (value) => (value ? JSON.stringify(value.toObject()) : null),
       serialize: (value) => (value ? value.toJSON() : null),
     })
 

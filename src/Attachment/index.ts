@@ -270,15 +270,26 @@ export class Attachment implements AttachmentContract {
   }
 
   /**
-   * Serialize attachment instance to JSON
+   * Convert attachment to plain object to be persisted inside
+   * the database
    */
-  public toJSON(): AttachmentAttributes & { url?: string } {
+  public toObject(): AttachmentAttributes {
     return {
-      ...(this.url ? { url: this.url } : {}),
       name: this.name,
       extname: this.extname,
       size: this.size,
       mimeType: this.mimeType,
+    }
+  }
+
+  /**
+   * Convert attachment to JSON object to be sent over
+   * the wire
+   */
+  public toJSON(): AttachmentAttributes & { url?: string } {
+    return {
+      ...(this.url ? { url: this.url } : {}),
+      ...this.toObject(),
     }
   }
 }

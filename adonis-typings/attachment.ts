@@ -118,7 +118,14 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
     getSignedUrl(options?: ContentHeaders & { expiresIn?: string | number }): Promise<string>
 
     /**
-     * Attachment attributes
+     * Convert attachment to plain object to be persisted inside
+     * the database
+     */
+    toObject(): AttachmentAttributes
+
+    /**
+     * Convert attachment to JSON object to be sent over
+     * the wire
      */
     toJSON(): AttachmentAttributes & { url?: string }
   }

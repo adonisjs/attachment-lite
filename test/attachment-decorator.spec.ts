@@ -80,6 +80,7 @@ test.group('@attachment | insert', (group) => {
 
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, Attachment)
+    assert.isUndefined(users[0].avatar?.url)
     assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
