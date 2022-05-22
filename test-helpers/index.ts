@@ -25,85 +25,82 @@ export async function setupApplication(
   await fs.add('.env', '')
   await fs.add(
     'config/app.ts',
-    `
-    export const appKey = 'averylong32charsrandomsecretkey',
-    export const http = {
-      cookie: {},
-      trustProxy: () => true,
-    }
-  `
+    `export const appKey = 'averylong32charsrandomsecretkey'
+export const http = {
+  cookie: {},
+  trustProxy: () => true,
+}
+`
   )
 
   await fs.add(
     'config/bodyparser.ts',
-    `
-    const config = {
-      whitelistedMethods: ['POST', 'PUT', 'PATCH', 'DELETE'],
-      json: {
-        encoding: 'utf-8',
-        limit: '1mb',
-        strict: true,
-        types: [
-          'application/json',
-        ],
-      },
-      form: {
-        encoding: 'utf-8',
-        limit: '1mb',
-        queryString: {},
-        types: ['application/x-www-form-urlencoded'],
-      },
-      raw: {
-        encoding: 'utf-8',
-        limit: '1mb',
-        queryString: {},
-        types: ['text/*'],
-      },
-      multipart: {
-        autoProcess: true,
-        convertEmptyStringsToNull: true,
-        processManually: [],
-        encoding: 'utf-8',
-        maxFields: 1000,
-        limit: '20mb',
-        types: ['multipart/form-data'],
-      },
-    }
+    `const config = {
+  whitelistedMethods: ['POST', 'PUT', 'PATCH', 'DELETE'],
+  json: {
+    encoding: 'utf-8',
+    limit: '1mb',
+    strict: true,
+    types: ['application/json'],
+  },
+  form: {
+    encoding: 'utf-8',
+    limit: '1mb',
+    queryString: {},
+    types: ['application/x-www-form-urlencoded'],
+  },
+  raw: {
+    encoding: 'utf-8',
+    limit: '1mb',
+    queryString: {},
+    types: ['text/*'],
+  },
+  multipart: {
+    autoProcess: true,
+    convertEmptyStringsToNull: true,
+    processManually: [],
+    encoding: 'utf-8',
+    maxFields: 1000,
+    limit: '20mb',
+    types: ['multipart/form-data'],
+  },
+}
 
-    export default config
-  `
+export default config
+`
   )
 
   await fs.add(
     'config/drive.ts',
-    `
-    export const disk = 'local',
-    export const disks = {
-      local: {
-        driver: 'local',
-        visibility: 'private',
-        root: '${join(fs.basePath, 'uploads').replace(/\\/g, '/')}',
-        serveFiles: true,
-        basePath: '/uploads'
-      }
-    }
-  `
+    `export const disk = 'local'
+export const disks = {
+  local: {
+    driver: 'local',
+    visibility: 'private',
+    root: '/Users/maximilian/Documents/Heroku Server/attachment-lite/test-helpers/__app/uploads',
+    serveFiles: true,
+    basePath: '/uploads',
+  },
+}
+`
   )
 
   await fs.add(
     'config/database.ts',
     `const databaseConfig = {
-      connection: 'sqlite',
-      connections: {
-        sqlite: {
-          client: 'sqlite3',
-          connection: {
-            filename: '${join(fs.basePath, 'db.sqlite3').replace(/\\/g, '/')}',
-          },
-        },
-      }
-    }
-    export default databaseConfig`
+  connection: 'sqlite',
+  connections: {
+    sqlite: {
+      client: 'sqlite3',
+      connection: {
+        filename:
+          '/Users/maximilian/Documents/Heroku Server/attachment-lite/test-helpers/__app/db.sqlite3',
+      },
+    },
+  },
+}
+export default databaseConfig
+`
   )
 
   const app = new Application(fs.basePath, environment, {

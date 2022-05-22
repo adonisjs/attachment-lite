@@ -1,5 +1,5 @@
 {
-  "name": "@adonisjs/attachment-lite",
+  "name": "attachment-lite",
   "version": "1.0.7",
   "description": "Turn any field on your Lucid model to an attachment data type",
   "main": "build/providers/AttachmentLiteProvider.js",
@@ -83,7 +83,8 @@
   },
   "homepage": "https://github.com/adonisjs/attachment-lite#readme",
   "dependencies": {
-    "@poppinss/utils": "^4.0.4"
+    "@poppinss/utils": "^4.0.4",
+    "detect-file-type": "^0.2.8"
   },
   "adonisjs": {
     "types": "@adonisjs/attachment-lite",

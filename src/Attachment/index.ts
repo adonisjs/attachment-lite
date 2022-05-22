@@ -19,6 +19,7 @@ import type {
   AttachmentAttributes,
   AttachmentConstructorContract,
 } from '@ioc:Adonis/Addons/AttachmentLite'
+import detect from 'detect-file-type'
 
 const REQUIRED_ATTRIBUTES = ['name', 'size', 'extname', 'mimeType']
 
@@ -48,6 +49,10 @@ export class Attachment implements AttachmentContract {
    * file
    */
   public static fromFile(file: MultipartFileContract) {
+    if (!file) {
+      throw new SyntaxError('You should provide a non-falsy value')
+    }
+
     const attributes = {
       extname: file.extname!,
       mimeType: `${file.type}/${file.subtype}`,
@@ -55,6 +60,37 @@ export class Attachment implements AttachmentContract {
     }
 
     return new Attachment(attributes, file)
+  }
+
+  public static fromBuffer(buffer: Buffer): Promise<Attachment> {
+    return new Promise((resolve, reject) => {
+      try {
+        type BufferProperty = { ext: string; mime: string }
+
+        let bufferProperty: BufferProperty | undefined
+
+        detect.fromBuffer(buffer, function (err: Error | string, result: BufferProperty) {
+          if (err) {
+            throw new Error(err instanceof Error ? err.message : err)
+          }
+          if (!result) {
+            throw new Exception('Please provide a valid file buffer')
+          }
+          bufferProperty = result
+        })
+
+        const { mime, ext } = bufferProperty!
+        const attributes = {
+          extname: ext,
+          mimeType: mime,
+          size: buffer.length,
+        }
+
+        return resolve(new Attachment(attributes, null, buffer))
+      } catch (error) {
+        return reject(error)
+      }
+    })
   }
 
   /**
@@ -122,7 +158,7 @@ export class Attachment implements AttachmentContract {
    * "isLocal = true" means the instance is created locally
    * using the bodyparser file object
    */
-  public isLocal = !!this.file
+  public isLocal = !!this.file || !!this.buffer
 
   /**
    * Find if the file has been persisted or not.
@@ -134,7 +170,11 @@ export class Attachment implements AttachmentContract {
    */
   public isDeleted: boolean
 
-  constructor(private attributes: AttachmentAttributes, private file?: MultipartFileContract) {
+  constructor(
+    private attributes: AttachmentAttributes,
+    private file?: MultipartFileContract | null,
+    private buffer?: Buffer | null
+  ) {
     if (this.attributes.name) {
       this.name = this.attributes.name
     }
@@ -185,12 +225,19 @@ export class Attachment implements AttachmentContract {
     /**
      * Write to the disk
      */
-    await this.file!.moveToDisk('./', { name: this.generateName() }, this.options?.disk)
+
+    const filename = this.generateName()
+    if (this.file) {
+      await this.file!.moveToDisk('./', { name: filename }, this.options?.disk)
+    } else if (this.buffer) {
+      await this.getDisk().put(filename, this.buffer)
+      this.buffer = null
+    }
 
     /**
      * Assign name to the file
      */
-    this.name = this.file!.fileName!
+    this.name = this.file?.fileName ?? filename
 
     /**
      * File has been persisted
@@ -214,6 +261,7 @@ export class Attachment implements AttachmentContract {
     await this.getDisk().delete(this.name)
     this.isDeleted = true
     this.isPersisted = false
+    this.buffer = null
   }
 
   /**
