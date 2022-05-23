@@ -48,7 +48,9 @@ test.group('Attachment | fromDbResponse', (group) => {
     assert.isFalse(attachment?.isLocal)
   })
 
-  test('save method should result in noop when attachment is created from db response', async ({ assert }) => {
+  test('save method should result in noop when attachment is created from db response', async ({
+    assert,
+  }) => {
     const attachment = Attachment.fromDbResponse(
       JSON.stringify({
         size: 1440,
