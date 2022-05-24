@@ -9,7 +9,7 @@
 
 import 'reflect-metadata'
 
-import test from 'japa'
+import { test } from '@japa/runner'
 import { join } from 'path'
 import supertest from 'supertest'
 import { createServer } from 'http'
@@ -24,7 +24,7 @@ import { setup, cleanup, setupApplication } from '../test-helpers'
 let app: ApplicationContract
 
 test.group('@attachment | insert', (group) => {
-  group.before(async () => {
+  group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
@@ -32,15 +32,15 @@ test.group('@attachment | insert', (group) => {
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
-  group.afterEach(async () => {
+  group.each.teardown(async () => {
     await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
   })
 
-  group.after(async () => {
+  group.teardown(async () => {
     await cleanup(app)
   })
 
-  test('save attachment to the db and on disk', async (assert) => {
+  test('save attachment to the db and on disk', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -86,7 +86,7 @@ test.group('@attachment | insert', (group) => {
     assert.isTrue(await Drive.exists(body.avatar.name))
   })
 
-  test('cleanup attachments when save call fails', async (assert) => {
+  test('cleanup attachments when save call fails', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -136,7 +136,7 @@ test.group('@attachment | insert', (group) => {
 })
 
 test.group('@attachment | insert with transaction', (group) => {
-  group.before(async () => {
+  group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
@@ -144,15 +144,15 @@ test.group('@attachment | insert with transaction', (group) => {
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
-  group.afterEach(async () => {
+  group.each.teardown(async () => {
     await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
   })
 
-  group.after(async () => {
+  group.teardown(async () => {
     await cleanup(app)
   })
 
-  test('save attachment to the db and on disk', async (assert) => {
+  test('save attachment to the db and on disk', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -201,7 +201,7 @@ test.group('@attachment | insert with transaction', (group) => {
     assert.isTrue(await Drive.exists(body.avatar.name))
   })
 
-  test('cleanup attachments when save call fails', async (assert) => {
+  test('cleanup attachments when save call fails', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -254,7 +254,7 @@ test.group('@attachment | insert with transaction', (group) => {
     assert.isFalse(await Drive.exists(body.avatar.name))
   })
 
-  test('cleanup attachments when rollback is called after success', async (assert) => {
+  test('cleanup attachments when rollback is called after success', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -301,7 +301,7 @@ test.group('@attachment | insert with transaction', (group) => {
 })
 
 test.group('@attachment | update', (group) => {
-  group.before(async () => {
+  group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
@@ -309,15 +309,15 @@ test.group('@attachment | update', (group) => {
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
-  group.afterEach(async () => {
+  group.each.teardown(async () => {
     await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
   })
 
-  group.after(async () => {
+  group.teardown(async () => {
     await cleanup(app)
   })
 
-  test('save attachment to the db and on disk', async (assert) => {
+  test('save attachment to the db and on disk', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -365,7 +365,7 @@ test.group('@attachment | update', (group) => {
     assert.isTrue(await Drive.exists(secondResponse.avatar.name))
   })
 
-  test('cleanup attachments when save call fails', async (assert) => {
+  test('cleanup attachments when save call fails', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -419,7 +419,7 @@ test.group('@attachment | update', (group) => {
 })
 
 test.group('@attachment | update with transaction', (group) => {
-  group.before(async () => {
+  group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
@@ -427,15 +427,15 @@ test.group('@attachment | update with transaction', (group) => {
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
-  group.afterEach(async () => {
+  group.each.teardown(async () => {
     await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
   })
 
-  group.after(async () => {
+  group.teardown(async () => {
     await cleanup(app)
   })
 
-  test('save attachment to the db and on disk', async (assert) => {
+  test('save attachment to the db and on disk', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const Db = app.container.resolveBinding('Adonis/Lucid/Database')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
@@ -486,7 +486,7 @@ test.group('@attachment | update with transaction', (group) => {
     assert.isTrue(await Drive.exists(secondResponse.avatar.name))
   })
 
-  test('cleanup attachments when save call fails', async (assert) => {
+  test('cleanup attachments when save call fails', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const Db = app.container.resolveBinding('Adonis/Lucid/Database')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
@@ -543,7 +543,7 @@ test.group('@attachment | update with transaction', (group) => {
     assert.isFalse(await Drive.exists(secondResponse.avatar.name))
   })
 
-  test('cleanup attachments when rollback is called after success', async (assert) => {
+  test('cleanup attachments when rollback is called after success', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const Db = app.container.resolveBinding('Adonis/Lucid/Database')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
@@ -600,7 +600,7 @@ test.group('@attachment | update with transaction', (group) => {
 })
 
 test.group('@attachment | resetToNull', (group) => {
-  group.before(async () => {
+  group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
@@ -608,15 +608,15 @@ test.group('@attachment | resetToNull', (group) => {
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
-  group.afterEach(async () => {
+  group.each.teardown(async () => {
     await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
   })
 
-  group.after(async () => {
+  group.teardown(async () => {
     await cleanup(app)
   })
 
-  test('save attachment to the db and on disk', async (assert) => {
+  test('save attachment to the db and on disk', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -660,7 +660,7 @@ test.group('@attachment | resetToNull', (group) => {
     assert.isFalse(await Drive.exists(firstResponse.avatar.name))
   })
 
-  test('do not remove old file when resetting to null fails', async (assert) => {
+  test('do not remove old file when resetting to null fails', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -711,7 +711,7 @@ test.group('@attachment | resetToNull', (group) => {
 })
 
 test.group('@attachment | resetToNull with transaction', (group) => {
-  group.before(async () => {
+  group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
@@ -719,15 +719,15 @@ test.group('@attachment | resetToNull with transaction', (group) => {
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
-  group.afterEach(async () => {
+  group.each.teardown(async () => {
     await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
   })
 
-  group.after(async () => {
+  group.teardown(async () => {
     await cleanup(app)
   })
 
-  test('save attachment to the db and on disk', async (assert) => {
+  test('save attachment to the db and on disk', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const Db = app.container.resolveBinding('Adonis/Lucid/Database')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
@@ -774,7 +774,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
     assert.isFalse(await Drive.exists(firstResponse.avatar.name))
   })
 
-  test('do not remove old file when resetting to null fails', async (assert) => {
+  test('do not remove old file when resetting to null fails', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const Db = app.container.resolveBinding('Adonis/Lucid/Database')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
@@ -828,7 +828,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
     assert.isTrue(await Drive.exists(firstResponse.avatar.name))
   })
 
-  test('do not remove old file when rollback was performed after success', async (assert) => {
+  test('do not remove old file when rollback was performed after success', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const Db = app.container.resolveBinding('Adonis/Lucid/Database')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
@@ -880,7 +880,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
 })
 
 test.group('@attachment | delete', (group) => {
-  group.before(async () => {
+  group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
@@ -888,15 +888,15 @@ test.group('@attachment | delete', (group) => {
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
-  group.afterEach(async () => {
+  group.each.teardown(async () => {
     await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
   })
 
-  group.after(async () => {
+  group.teardown(async () => {
     await cleanup(app)
   })
 
-  test('delete attachment when model is deleted', async (assert) => {
+  test('delete attachment when model is deleted', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -939,7 +939,7 @@ test.group('@attachment | delete', (group) => {
     assert.isFalse(await Drive.exists(firstResponse.avatar.name))
   })
 
-  test('do not delete attachment when deletion fails', async (assert) => {
+  test('do not delete attachment when deletion fails', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -991,7 +991,7 @@ test.group('@attachment | delete', (group) => {
 })
 
 test.group('@attachment | delete with transaction', (group) => {
-  group.before(async () => {
+  group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
@@ -999,15 +999,15 @@ test.group('@attachment | delete with transaction', (group) => {
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
-  group.afterEach(async () => {
+  group.each.teardown(async () => {
     await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
   })
 
-  group.after(async () => {
+  group.teardown(async () => {
     await cleanup(app)
   })
 
-  test('delete attachment when model is deleted', async (assert) => {
+  test('delete attachment when model is deleted', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const Db = app.container.resolveBinding('Adonis/Lucid/Database')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
@@ -1055,7 +1055,7 @@ test.group('@attachment | delete with transaction', (group) => {
     assert.isFalse(await Drive.exists(firstResponse.avatar.name))
   })
 
-  test('do not delete attachment when deletion fails', async (assert) => {
+  test('do not delete attachment when deletion fails', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const Db = app.container.resolveBinding('Adonis/Lucid/Database')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
@@ -1113,7 +1113,7 @@ test.group('@attachment | delete with transaction', (group) => {
 })
 
 test.group('@attachment | find', (group) => {
-  group.before(async () => {
+  group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
@@ -1121,15 +1121,15 @@ test.group('@attachment | find', (group) => {
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
-  group.afterEach(async () => {
+  group.each.teardown(async () => {
     await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
   })
 
-  group.after(async () => {
+  group.teardown(async () => {
     await cleanup(app)
   })
 
-  test('pre compute url on find', async (assert) => {
+  test('pre compute url on find', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1173,7 +1173,7 @@ test.group('@attachment | find', (group) => {
     assert.isTrue(await Drive.exists(body.avatar.name))
   })
 
-  test('Attachment response should be null when column value is null', async (assert) => {
+  test('Attachment response should be null when column value is null', async ({ assert }) => {
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
 
@@ -1211,7 +1211,7 @@ test.group('@attachment | find', (group) => {
     assert.isNull(body.avatar)
   })
 
-  test('do not pre compute when preComputeUrl is not enabled', async (assert) => {
+  test('do not pre compute when preComputeUrl is not enabled', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1257,7 +1257,7 @@ test.group('@attachment | find', (group) => {
 })
 
 test.group('@attachment | fetch', (group) => {
-  group.before(async () => {
+  group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
@@ -1265,15 +1265,15 @@ test.group('@attachment | fetch', (group) => {
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
-  group.afterEach(async () => {
+  group.each.teardown(async () => {
     await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
   })
 
-  group.after(async () => {
+  group.teardown(async () => {
     await cleanup(app)
   })
 
-  test('pre compute url on fetch', async (assert) => {
+  test('pre compute url on fetch', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1317,7 +1317,7 @@ test.group('@attachment | fetch', (group) => {
     assert.isTrue(await Drive.exists(body.avatar.name))
   })
 
-  test('Attachment response should be null when column value is null', async (assert) => {
+  test('Attachment response should be null when column value is null', async ({ assert }) => {
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
 
@@ -1354,7 +1354,7 @@ test.group('@attachment | fetch', (group) => {
     assert.isNull(body[1].avatar)
   })
 
-  test('do not pre compute when preComputeUrl is not enabled', async (assert) => {
+  test('do not pre compute when preComputeUrl is not enabled', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1400,7 +1400,7 @@ test.group('@attachment | fetch', (group) => {
 })
 
 test.group('@attachment | paginate', (group) => {
-  group.before(async () => {
+  group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
@@ -1408,15 +1408,15 @@ test.group('@attachment | paginate', (group) => {
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
   })
 
-  group.afterEach(async () => {
+  group.each.teardown(async () => {
     await app.container.resolveBinding('Adonis/Lucid/Database').connection().truncate('users')
   })
 
-  group.after(async () => {
+  group.teardown(async () => {
     await cleanup(app)
   })
 
-  test('pre compute url on paginate', async (assert) => {
+  test('pre compute url on paginate', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -1460,7 +1460,7 @@ test.group('@attachment | paginate', (group) => {
     assert.isTrue(await Drive.exists(body.avatar.name))
   })
 
-  test('Attachment response should be null when column value is null', async (assert) => {
+  test('Attachment response should be null when column value is null', async ({ assert }) => {
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
 
@@ -1496,7 +1496,7 @@ test.group('@attachment | paginate', (group) => {
     assert.isNull(body.data[1].avatar)
   })
 
-  test('do not pre compute when preComputeUrl is not enabled', async (assert) => {
+  test('do not pre compute when preComputeUrl is not enabled', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
