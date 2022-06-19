@@ -289,6 +289,48 @@ await User.preComputeUrls(user)
 
 return user
 ```
+
+## Using Attachment lite with model factories
+Attachment lite primarly uses the multipart request body to persist user upload files. However, you can also construct an instance of `Attachment` class manually and use the AdonisJS drive to persist the corresponding file.
+
+In the following example, we create an instance of the Attachment class to represent the Post cover image.
+
+```ts
+import Post from 'App/Models/Post'
+import Drive from '@ioc:Adonis/Core/Drive'
+import { file } from '@ioc:Adonis/Core/Helpers'
+import Factory from '@ioc:Adonis/Lucid/Factory'
+import { Attachment } from '@ioc:Adonis/Addons/AttachmentLite'
+
+export default Factory.define(Post, async ({ faker }) => {
+  /**
+   * Step 1: Create an instance of attachment
+   */
+  const coverImage = new Attachment({
+    extname: 'png',
+    mimeType: 'image/png',
+    size: 10 * 1000,
+    name: `${faker.random.alphaNumeric(10)}.png`,
+  })
+
+  /**
+   * Step 2: Mark image as persisted, this will disable the
+   * functions of attachment lite that looks for multipart
+   * body and attempts to write the file from the stream
+   */
+  coverImage.isPersisted = true
+
+  /**
+   * Step 3: Persist the file using Drive.
+   */
+  await Drive.put(coverImage.name, (await file.generatePng('1mb')).contents)
+
+  return {
+    title: faker.lorem.words(5),
+    coverImage: coverImage,
+  }
+}).build()
+```
  
 [github-actions-image]: https://img.shields.io/github/workflow/status/adonisjs/attachment-lite/test?style=for-the-badge
 [github-actions-url]: https://github.com/adonisjs/attachment-lite/actions/workflows/test.yml "github-actions"
