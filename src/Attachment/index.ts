@@ -88,6 +88,7 @@ export class Attachment implements AttachmentContract {
        * Files fetched from DB are always persisted
        */
       attachment.isPersisted = true
+      return attachment
     })
 
     return multiple ? attachments : attachments[0]

@@ -42,10 +42,33 @@ test.group('Attachment | fromDbResponse', (group) => {
         extname: 'jpg',
         mimeType: 'image/jpg',
       })
-    )
+    ) as Attachment
 
     assert.isTrue(attachment?.isPersisted)
     assert.isFalse(attachment?.isLocal)
+  })
+
+  test('create attachment array from db response', ({ assert }) => {
+    const attachments = Attachment.fromDbResponse(
+      JSON.stringify([
+        {
+          size: 1440,
+          name: 'foo.jpg',
+          extname: 'jpg',
+          mimeType: 'image/jpg',
+        },
+        {
+          size: 1440,
+          name: 'foo.webp',
+          extname: 'webp',
+          mimeType: 'image/webp',
+        },
+      ])
+    ) as Attachment[]
+    attachments.forEach((attachment) => {
+      assert.isTrue(attachment?.isPersisted)
+      assert.isFalse(attachment?.isLocal)
+    })
   })
 
   test('save method should result in noop when attachment is created from db response', async ({

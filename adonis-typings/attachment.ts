@@ -136,7 +136,10 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
    */
   export type AttachmentDecorator = (
     options?: AttachmentOptions & Partial<ColumnOptions>
-  ) => <TKey extends string, TTarget extends { [K in TKey]?: AttachmentContract | null }>(
+  ) => <
+    TKey extends string,
+    TTarget extends { [K in TKey]?: AttachmentContract[] | AttachmentContract | null }
+  >(
     target: TTarget,
     property: TKey
   ) => void
