@@ -33,6 +33,7 @@
   "author": "virk,adonisjs",
   "license": "MIT",
   "devDependencies": {
+    "@adonisjs/bodyparser": "^8.1.7",
     "@adonisjs/core": "^5.8.2",
     "@adonisjs/lucid": "^18.0.0",
     "@adonisjs/mrm-preset": "^5.0.3",
