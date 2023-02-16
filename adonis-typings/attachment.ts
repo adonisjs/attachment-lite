@@ -38,6 +38,7 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
     preComputeUrl?:
       | boolean
       | ((disk: DriverContract, attachment: AttachmentContract) => Promise<string>)
+    multiple?: boolean
   }
 
   /**

@@ -60,31 +60,37 @@ export class Attachment implements AttachmentContract {
   /**
    * Create attachment instance from the database response
    */
-  public static fromDbResponse(response: any) {
+  public static fromDbResponse(response: any, multiple?: boolean) {
     if (response === null) {
-      return null
+      return multiple ? [] : null
     }
 
-    const attributes = typeof response === 'string' ? JSON.parse(response) : response
+    const rawData = typeof response === 'string' ? JSON.parse(response) : response
+
+    const rawAttachments: any[] = multiple && Array.isArray(rawData) ? rawData : [rawData]
 
     /**
      * Validate the db response
      */
-    REQUIRED_ATTRIBUTES.forEach((attribute) => {
-      if (attributes[attribute] === undefined) {
-        throw new Exception(
-          `Cannot create attachment from database response. Missing attribute "${attribute}"`
-        )
-      }
+    rawAttachments.forEach((attributes) => {
+      REQUIRED_ATTRIBUTES.forEach((attribute) => {
+        if (attributes[attribute] === undefined) {
+          throw new Exception(
+            `Cannot create attachment from database response. Missing attribute "${attribute}"`
+          )
+        }
+      })
     })
 
-    const attachment = new Attachment(attributes)
+    const attachments = rawAttachments.map((attributes) => {
+      const attachment = new Attachment(attributes)
+      /**
+       * Files fetched from DB are always persisted
+       */
+      attachment.isPersisted = true
+    })
 
-    /**
-     * Files fetched from DB are always persisted
-     */
-    attachment.isPersisted = true
-    return attachment
+    return multiple ? attachments : attachments[0]
   }
 
   /**

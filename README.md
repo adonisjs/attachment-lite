@@ -62,7 +62,8 @@ If you are creating the column for the first time, make sure that you use the JS
   public async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.increments()
-      table.json('avatar') // <-- Use a JSON data type
+      table.json('avatar') // <-- Use JSON data type for single attachment fields
+      table.json('photos') // <-- Use JSON data type for multiple attachment fields
     })
   }
 ```
@@ -82,6 +83,7 @@ node ace make:migration change_avatar_column_to_json --table=users
   public async up() {
     this.schema.alterTable(this.tableName, (table) => {
       table.json('avatar').alter() // <-- Alter the column definition
+      table.json('photos').alter() // <-- Alter the column definition
     })
   }
 ```
@@ -100,6 +102,9 @@ import {
 class User extends BaseModel {
   @attachment()
   public avatar: AttachmentContract
+
+  @attachment({ multiple: true })
+  public photos: AttachmentContract[]
 }
 ```
 
@@ -114,6 +119,20 @@ class UsersController {
     const user = new User()
 
     user.avatar = Attachment.fromFile(avatar)
+    await user.save()
+  }
+
+  // Add attachment to a multiple attachment field
+  public storePhoto({ request, auth }: HttpContextContract) {
+    const photo = request.file('photo')!
+    auth.user.photos.push(Attachment.fromFile(avatar))
+    await user.save()
+  }
+
+  // Remove attachment from a multiple attachment field
+  public deletePhoto({ request, auth }: HttpContextContract) {
+    const photo = request.input('photo')!
+    auth.user.photos = user.photos.filter(item => item.name !== photo.name)
     await user.save()
   }
 }

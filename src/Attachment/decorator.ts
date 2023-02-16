@@ -26,47 +26,35 @@ async function persistAttachment(
   property: string,
   options?: AttachmentOptions
 ) {
-  const existingFile = modelInstance.$original[property] as AttachmentContract
-  const newFile = modelInstance[property] as AttachmentContract
+  const existingFileList: AttachmentContract[] = Array.isArray(modelInstance.$original[property])
+    ? modelInstance.$original[property]
+    : [modelInstance.$original[property]]
+  const newFileList: AttachmentContract[] = Array.isArray(modelInstance[property])
+    ? modelInstance[property]
+    : [modelInstance[property]]
 
-  /**
-   * Skip when the attachment property hasn't been updated
-   */
-  if (existingFile === newFile) {
-    return
-  }
-
-  /**
-   * There was an existing file, but there is no new file. Hence we must
-   * remove the existing file.
-   */
-  if (existingFile && !newFile) {
-    existingFile.setOptions(options)
-    modelInstance['attachments'].detached.push(existingFile)
-    return
-  }
-
-  /**
-   * If there is a new file and its local then we must save this
-   * file.
-   */
-  if (newFile && newFile.isLocal) {
-    newFile.setOptions(options)
-    modelInstance['attachments'].attached.push(newFile)
-
+  existingFileList.forEach((existingFile) => {
     /**
-     * If there was an existing file, then we must get rid of it
+     * Mark existing files as detached if they don't exist in new files anymore.
      */
-    if (existingFile) {
+    if (!newFileList.some((newFile) => existingFile.name === newFile.name)) {
       existingFile.setOptions(options)
       modelInstance['attachments'].detached.push(existingFile)
     }
+  })
 
-    /**
-     * Also write the file to the disk right away
-     */
-    await newFile.save()
-  }
+  await Promise.allSettled(
+    newFileList.map(async (newFile) => {
+      /**
+       * Save new local files and mark them attached.
+       */
+      if (newFile && newFile.isLocal) {
+        newFile.setOptions(options)
+        modelInstance['attachments'].attached.push(newFile)
+        await newFile.save()
+      }
+    })
+  )
 }
 
 /**
@@ -146,7 +134,11 @@ async function deleteWithAttachments() {
   this.constructor['attachments'].forEach(
     (attachmentField: { property: string; options?: AttachmentOptions }) => {
       if (this[attachmentField.property]) {
-        this['attachments'].detached.push(this[attachmentField.property])
+        if (attachmentField.options?.multiple) {
+          this['attachments'].detached.push(...this[attachmentField.property])
+        } else {
+          this['attachments'].detached.push(this[attachmentField.property])
+        }
       }
     }
   )
@@ -173,7 +165,13 @@ async function afterFind(modelInstance: LucidRow) {
       (attachmentField: { property: string; options?: AttachmentOptions }) => {
         if (modelInstance[attachmentField.property]) {
           modelInstance[attachmentField.property].setOptions(attachmentField.options)
-          return modelInstance[attachmentField.property].computeUrl()
+          if (attachmentField.options?.multiple) {
+            return Promise.all(
+              modelInstance[attachmentField.property].map((item) => item.computeUrl())
+            )
+          } else {
+            return modelInstance[attachmentField.property].computeUrl()
+          }
         }
       }
     )
@@ -198,7 +196,7 @@ export const attachment: AttachmentDecorator = (options) => {
     /**
      * Separate attachment options from the column options
      */
-    const { disk, folder, preComputeUrl, ...columnOptions } = options || {}
+    const { disk, folder, preComputeUrl, multiple, ...columnOptions } = options || {}
 
     /**
      * Define attachments array on the model constructor
@@ -209,14 +207,14 @@ export const attachment: AttachmentDecorator = (options) => {
      * Push current column (one using the @attachment decorator) to
      * the attachments array
      */
-    Model['attachments'].push({ property, options: { disk, folder, preComputeUrl } })
+    Model['attachments'].push({ property, options: { disk, folder, preComputeUrl, multiple } })
 
     /**
      * Define the property as a column too
      */
     Model.$addColumn(property, {
       ...columnOptions,
-      consume: (value) => (value ? Attachment.fromDbResponse(value) : null),
+      consume: (value) => (value ? Attachment.fromDbResponse(value, multiple) : null),
       prepare: (value) => (value ? JSON.stringify(value.toObject()) : null),
       serialize: (value) => (value ? value.toJSON() : null),
     })
