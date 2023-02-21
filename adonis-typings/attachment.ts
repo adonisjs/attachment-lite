@@ -26,6 +26,7 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
     size: number
     extname: string
     mimeType: string
+    variants: { [name: string]: VariantAttributes }
   }
 
   /**
@@ -38,6 +39,7 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
     preComputeUrl?:
       | boolean
       | ((disk: DriverContract, attachment: AttachmentContract) => Promise<string>)
+    variants?: string | string[]
   }
 
   /**
@@ -70,6 +72,11 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
      * The file mimetype.
      */
     mimeType: string
+
+    /**
+     * The file variants.
+     */
+    variants: { [key: string]: VariantAttributes & { url?: string } }
 
     /**
      * "isLocal = true" means the instance is created locally
@@ -149,6 +156,9 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
     fromDbResponse(response: string): AttachmentContract
     getDrive(): DriveManagerContract
     setDrive(drive: DriveManagerContract): void
+
+    getConfig(): AttachmentConfig
+    setConfig(config: AttachmentConfig): void
   }
 
   export const attachment: AttachmentDecorator

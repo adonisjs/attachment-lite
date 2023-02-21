@@ -91,6 +91,34 @@ export async function setupApplication(
   )
 
   await fs.add(
+    'config/attachment.ts',
+    `const attachmentConfig = {
+      variants: {
+        thumbnail: {
+          resize: 300,
+          format: 'jpg'
+        },
+        medium: {
+          resize: {
+            width: 500,
+            fit: 'contain',
+            position: 'right top',
+          },
+          format: [ 'jpg', {
+            quality: 10,
+            mozjpeg: true
+          }]
+        },
+        large: {
+          resize: 1500,
+          format: 'jpg'
+        }
+      }
+    }
+    export default attachmentConfig`
+  )
+
+  await fs.add(
     'config/database.ts',
     `const databaseConfig = {
       connection: 'sqlite',
@@ -124,7 +152,7 @@ async function createUsersTable(client: QueryClientContract) {
   await client.schema.createTable('users', (table) => {
     table.increments('id').notNullable().primary()
     table.string('username').notNullable().unique()
-    table.string('avatar').nullable()
+    table.json('avatar').nullable()
     table.string('cover_image').nullable()
   })
 }

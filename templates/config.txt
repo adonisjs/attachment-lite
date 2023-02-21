@@ -1,0 +1,20 @@
+import { AttachmentConfig } from '@ioc:Adonis/Addons/AttachmentLite'
+
+const attachmentConfig: AttachmentConfig = {
+  variants: {
+    thumbnail: {
+      resize: 320,
+      format: 'jpg'
+    },
+    medium: {
+      resize: 640,
+      format: 'jpg'
+    },
+    large: {
+      resize: 1280,
+      format: 'jpg'
+    }
+  }
+}
+
+export default attachmentConfig

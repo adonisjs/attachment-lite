@@ -11,7 +11,7 @@ import 'reflect-metadata'
 
 import { test } from '@japa/runner'
 import { join } from 'path'
-import * as supertest from 'supertest'
+import supertest from 'supertest'
 import { createServer } from 'http'
 import { ApplicationContract } from '@ioc:Adonis/Core/Application'
 import { BodyParserMiddleware } from '@adonisjs/bodyparser/build/src/BodyParser'
@@ -46,6 +46,7 @@ test.group('Attachment | fromDbResponse', (group) => {
 
     assert.isTrue(attachment?.isPersisted)
     assert.isFalse(attachment?.isLocal)
+    assert.deepEqual(attachment?.variants, {})
   })
 
   test('save method should result in noop when attachment is created from db response', async ({

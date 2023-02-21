@@ -23,13 +23,14 @@ import { setup, cleanup, setupApplication } from '../test-helpers'
 
 let app: ApplicationContract
 
-test.group('@attachment | insert', (group) => {
+test.group('@attachment.variant | insert', (group) => {
   group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    Attachment.setConfig(app.config.get('attachment', { variants: {} }))
   })
 
   group.each.teardown(async () => {
@@ -40,7 +41,7 @@ test.group('@attachment | insert', (group) => {
     await cleanup(app)
   })
 
-  test('save attachment to the db and on disk', async ({ assert }) => {
+  test('save attachment variants to the db and on disk', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -52,7 +53,7 @@ test.group('@attachment | insert', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -84,10 +85,16 @@ test.group('@attachment | insert', (group) => {
     assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
-    assert.isEmpty(users[0].avatar.variants)
+    assert.isTrue(await Drive.exists(body.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.medium.name))
+    assert.isNotEmpty(users[0].avatar?.variants)
+    assert.containsSubset(users[0].avatar?.variants, {
+      thumbnail: { name: body.avatar.variants.thumbnail.name },
+      medium: { name: body.avatar.variants.medium.name },
+    })
   })
 
-  test('cleanup attachments when save call fails', async ({ assert }) => {
+  test('cleanup attachment variants when save call fails', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -99,7 +106,7 @@ test.group('@attachment | insert', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -129,20 +136,22 @@ test.group('@attachment | insert', (group) => {
       .attach('avatar', join(__dirname, '../cat.jpeg'))
 
     const users = await User.all()
-
     assert.lengthOf(users, 1)
     assert.isNull(users[0].avatar)
     assert.isFalse(await Drive.exists(body.avatar.name))
+    assert.isFalse(await Drive.exists(body.avatar.variants.thumbnail?.name))
+    assert.isFalse(await Drive.exists(body.avatar.variants.medium?.name))
   })
 })
 
-test.group('@attachment | insert with transaction', (group) => {
+test.group('@attachment.variant | insert with transaction', (group) => {
   group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    Attachment.setConfig(app.config.get('attachment', { variants: {} }))
   })
 
   group.each.teardown(async () => {
@@ -153,7 +162,7 @@ test.group('@attachment | insert with transaction', (group) => {
     await cleanup(app)
   })
 
-  test('save attachment to the db and on disk', async ({ assert }) => {
+  test('save attachment variants to the db and on disk', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -166,7 +175,7 @@ test.group('@attachment | insert with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -198,11 +207,17 @@ test.group('@attachment | insert with transaction', (group) => {
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, Attachment)
     assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
+    assert.containsSubset(users[0].avatar?.variants, {
+      thumbnail: { name: body.avatar.variants.thumbnail.name },
+      medium: { name: body.avatar.variants.medium.name },
+    })
 
     assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.medium.name))
   })
 
-  test('cleanup attachments when save call fails', async ({ assert }) => {
+  test('cleanup attachment variants when save call fails', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -215,7 +230,7 @@ test.group('@attachment | insert with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -252,10 +267,13 @@ test.group('@attachment | insert with transaction', (group) => {
 
     assert.lengthOf(users, 1)
     assert.isNull(users[0].avatar)
+
     assert.isFalse(await Drive.exists(body.avatar.name))
+    assert.isFalse(await Drive.exists(body.avatar.variants.thumbnail?.name))
+    assert.isFalse(await Drive.exists(body.avatar.variants.medium?.name))
   })
 
-  test('cleanup attachments when rollback is called after success', async ({ assert }) => {
+  test('cleanup attachment variants when rollback is called after success', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -268,7 +286,7 @@ test.group('@attachment | insert with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -298,16 +316,19 @@ test.group('@attachment | insert with transaction', (group) => {
 
     assert.lengthOf(users, 0)
     assert.isFalse(await Drive.exists(body.avatar.name))
+    assert.isFalse(await Drive.exists(body.avatar.variants.thumbnail?.name))
+    assert.isFalse(await Drive.exists(body.avatar.variants.medium?.name))
   })
 })
 
-test.group('@attachment | update', (group) => {
+test.group('@attachment.variant | update', (group) => {
   group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    Attachment.setConfig(app.config.get('attachment', { variants: {} }))
   })
 
   group.each.teardown(async () => {
@@ -318,7 +339,7 @@ test.group('@attachment | update', (group) => {
     await cleanup(app)
   })
 
-  test('save attachment to the db and on disk', async ({ assert }) => {
+  test('save attachment variant to the db and on disk', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
     const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
@@ -330,7 +351,7 @@ test.group('@attachment | update', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -362,8 +383,14 @@ test.group('@attachment | update', (group) => {
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, Attachment)
     assert.deepEqual(users[0].avatar?.toJSON(), secondResponse.avatar)
+
     assert.isFalse(await Drive.exists(firstResponse.avatar.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.variants.thumbnail.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.variants.medium.name))
+
     assert.isTrue(await Drive.exists(secondResponse.avatar.name))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.variants.medium.name))
   })
 
   test('cleanup attachments when save call fails', async ({ assert }) => {
@@ -378,7 +405,7 @@ test.group('@attachment | update', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -414,18 +441,25 @@ test.group('@attachment | update', (group) => {
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, Attachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
+
     assert.isTrue(await Drive.exists(firstResponse.avatar.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.variants.medium.name))
+
     assert.isFalse(await Drive.exists(secondResponse.avatar.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.variants.thumbnail?.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.variants.medium?.name))
   })
 })
 
-test.group('@attachment | update with transaction', (group) => {
+test.group('@attachment.variant | update with transaction', (group) => {
   group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    Attachment.setConfig(app.config.get('attachment', { variants: {} }))
   })
 
   group.each.teardown(async () => {
@@ -449,7 +483,7 @@ test.group('@attachment | update with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -483,11 +517,17 @@ test.group('@attachment | update with transaction', (group) => {
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, Attachment)
     assert.deepEqual(users[0].avatar?.toJSON(), secondResponse.avatar)
+
     assert.isFalse(await Drive.exists(firstResponse.avatar.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.variants.thumbnail.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.variants.medium.name))
+
     assert.isTrue(await Drive.exists(secondResponse.avatar.name))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(secondResponse.avatar.variants.medium.name))
   })
 
-  test('cleanup attachments when save call fails', async ({ assert }) => {
+  test('cleanup attachment variants when save call fails', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const Db = app.container.resolveBinding('Adonis/Lucid/Database')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
@@ -500,7 +540,7 @@ test.group('@attachment | update with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -536,15 +576,19 @@ test.group('@attachment | update with transaction', (group) => {
       .attach('avatar', join(__dirname, '../cat.jpeg'))
 
     const users = await User.all()
-
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, Attachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
+
     assert.isTrue(await Drive.exists(firstResponse.avatar.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.variants.medium.name))
     assert.isFalse(await Drive.exists(secondResponse.avatar.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.variants.thumbnail?.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.variants.medium?.name))
   })
 
-  test('cleanup attachments when rollback is called after success', async ({ assert }) => {
+  test('cleanup attachment variants when rollback is called after success', async ({ assert }) => {
     const Drive = app.container.resolveBinding('Adonis/Core/Drive')
     const Db = app.container.resolveBinding('Adonis/Lucid/Database')
     const { column, BaseModel } = app.container.use('Adonis/Lucid/Orm')
@@ -557,7 +601,7 @@ test.group('@attachment | update with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -595,18 +639,25 @@ test.group('@attachment | update with transaction', (group) => {
     assert.lengthOf(users, 1)
     assert.instanceOf(users[0].avatar, Attachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
+
     assert.isTrue(await Drive.exists(firstResponse.avatar.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.variants.medium.name))
+
     assert.isFalse(await Drive.exists(secondResponse.avatar.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.variants.thumbnail?.name))
+    assert.isFalse(await Drive.exists(secondResponse.avatar.variants.medium?.name))
   })
 })
 
-test.group('@attachment | resetToNull', (group) => {
+test.group('@attachment.variant | resetToNull', (group) => {
   group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    Attachment.setConfig(app.config.get('attachment', { variants: {} }))
   })
 
   group.each.teardown(async () => {
@@ -629,7 +680,7 @@ test.group('@attachment | resetToNull', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -659,6 +710,8 @@ test.group('@attachment | resetToNull', (group) => {
     assert.lengthOf(users, 1)
     assert.isNull(users[0].avatar)
     assert.isFalse(await Drive.exists(firstResponse.avatar.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.variants.thumbnail.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.variants.medium.name))
   })
 
   test('do not remove old file when resetting to null fails', async ({ assert }) => {
@@ -673,7 +726,7 @@ test.group('@attachment | resetToNull', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -708,16 +761,19 @@ test.group('@attachment | resetToNull', (group) => {
     assert.instanceOf(users[0].avatar, Attachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
     assert.isTrue(await Drive.exists(firstResponse.avatar.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.variants.medium.name))
   })
 })
 
-test.group('@attachment | resetToNull with transaction', (group) => {
+test.group('@attachment.variant | resetToNull with transaction', (group) => {
   group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    Attachment.setConfig(app.config.get('attachment', { variants: {} }))
   })
 
   group.each.teardown(async () => {
@@ -741,7 +797,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -773,6 +829,8 @@ test.group('@attachment | resetToNull with transaction', (group) => {
     assert.lengthOf(users, 1)
     assert.isNull(users[0].avatar)
     assert.isFalse(await Drive.exists(firstResponse.avatar.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.variants.thumbnail.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.variants.medium.name))
   })
 
   test('do not remove old file when resetting to null fails', async ({ assert }) => {
@@ -788,7 +846,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -827,6 +885,8 @@ test.group('@attachment | resetToNull with transaction', (group) => {
     assert.instanceOf(users[0].avatar, Attachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
     assert.isTrue(await Drive.exists(firstResponse.avatar.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.variants.medium.name))
   })
 
   test('do not remove old file when rollback was performed after success', async ({ assert }) => {
@@ -842,7 +902,7 @@ test.group('@attachment | resetToNull with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -877,16 +937,19 @@ test.group('@attachment | resetToNull with transaction', (group) => {
     assert.instanceOf(users[0].avatar, Attachment)
     assert.deepEqual(users[0].avatar?.toJSON(), firstResponse.avatar)
     assert.isTrue(await Drive.exists(firstResponse.avatar.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(firstResponse.avatar.variants.medium.name))
   })
 })
 
-test.group('@attachment | delete', (group) => {
+test.group('@attachment.variant | delete', (group) => {
   group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    Attachment.setConfig(app.config.get('attachment', { variants: {} }))
   })
 
   group.each.teardown(async () => {
@@ -909,7 +972,7 @@ test.group('@attachment | delete', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -938,6 +1001,8 @@ test.group('@attachment | delete', (group) => {
     const users = await User.all()
     assert.lengthOf(users, 0)
     assert.isFalse(await Drive.exists(firstResponse.avatar.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.variants.thumbnail.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.variants.medium.name))
   })
 
   test('do not delete attachment when deletion fails', async ({ assert }) => {
@@ -952,7 +1017,7 @@ test.group('@attachment | delete', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -988,16 +1053,19 @@ test.group('@attachment | delete', (group) => {
     assert.lengthOf(users, 1)
     assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
     assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.medium.name))
   })
 })
 
-test.group('@attachment | delete with transaction', (group) => {
+test.group('@attachment.variant | delete with transaction', (group) => {
   group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    Attachment.setConfig(app.config.get('attachment', { variants: {} }))
   })
 
   group.each.teardown(async () => {
@@ -1021,7 +1089,7 @@ test.group('@attachment | delete with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -1054,6 +1122,8 @@ test.group('@attachment | delete with transaction', (group) => {
     const users = await User.all()
     assert.lengthOf(users, 0)
     assert.isFalse(await Drive.exists(firstResponse.avatar.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.variants.thumbnail.name))
+    assert.isFalse(await Drive.exists(firstResponse.avatar.variants.medium.name))
   })
 
   test('do not delete attachment when deletion fails', async ({ assert }) => {
@@ -1069,7 +1139,7 @@ test.group('@attachment | delete with transaction', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -1110,16 +1180,19 @@ test.group('@attachment | delete with transaction', (group) => {
     assert.lengthOf(users, 1)
     assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
     assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.medium.name))
   })
 })
 
-test.group('@attachment | find', (group) => {
+test.group('@attachment.variant | find', (group) => {
   group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    Attachment.setConfig(app.config.get('attachment', { variants: {} }))
   })
 
   group.each.teardown(async () => {
@@ -1142,7 +1215,7 @@ test.group('@attachment | find', (group) => {
       @column()
       public username: string
 
-      @attachment({ preComputeUrl: true })
+      @attachment({ preComputeUrl: true, variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -1169,9 +1242,15 @@ test.group('@attachment | find', (group) => {
     const user = await User.firstOrFail()
     assert.instanceOf(user.avatar, Attachment)
     assert.isDefined(user.avatar?.url)
+    assert.isDefined(user.avatar?.variants?.thumbnail?.url)
+    assert.isDefined(user.avatar?.variants?.medium?.url)
     assert.isDefined(body.avatar.url)
+    assert.isDefined(body.avatar?.variants?.thumbnail?.url)
+    assert.isDefined(body.avatar?.variants?.medium?.url)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.medium.name))
   })
 
   test('Attachment response should be null when column value is null', async ({ assert }) => {
@@ -1224,7 +1303,7 @@ test.group('@attachment | find', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -1252,18 +1331,23 @@ test.group('@attachment | find', (group) => {
     assert.instanceOf(user.avatar, Attachment)
     assert.isUndefined(user.avatar?.url)
     assert.isUndefined(body.avatar.url)
+    assert.isUndefined(body.avatar.variants.thumbnail.url)
+    assert.isUndefined(body.avatar.variants.medium.url)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.medium.name))
   })
 })
 
-test.group('@attachment | fetch', (group) => {
+test.group('@attachment.variant | fetch', (group) => {
   group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    Attachment.setConfig(app.config.get('attachment', { variants: {} }))
   })
 
   group.each.teardown(async () => {
@@ -1286,7 +1370,7 @@ test.group('@attachment | fetch', (group) => {
       @column()
       public username: string
 
-      @attachment({ preComputeUrl: true })
+      @attachment({ preComputeUrl: true, variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -1314,8 +1398,12 @@ test.group('@attachment | fetch', (group) => {
     assert.instanceOf(users[0].avatar, Attachment)
     assert.isDefined(users[0].avatar?.url)
     assert.isDefined(body.avatar.url)
+    assert.isDefined(body.avatar.variants.thumbnail.url)
+    assert.isDefined(body.avatar.variants.medium.url)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.medium.name))
   })
 
   test('Attachment response should be null when column value is null', async ({ assert }) => {
@@ -1329,7 +1417,7 @@ test.group('@attachment | fetch', (group) => {
       @column()
       public username: string
 
-      @attachment({ preComputeUrl: true })
+      @attachment({ preComputeUrl: true, variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -1367,7 +1455,7 @@ test.group('@attachment | fetch', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -1395,18 +1483,23 @@ test.group('@attachment | fetch', (group) => {
     assert.instanceOf(users[0].avatar, Attachment)
     assert.isUndefined(users[0].avatar?.url)
     assert.isUndefined(body.avatar.url)
+    assert.isUndefined(body.avatar.variants.thumbnail.url)
+    assert.isUndefined(body.avatar.variants.medium.url)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.medium.name))
   })
 })
 
-test.group('@attachment | paginate', (group) => {
+test.group('@attachment.variant | paginate', (group) => {
   group.setup(async () => {
     app = await setupApplication()
     await setup(app)
 
     app.container.resolveBinding('Adonis/Core/Route').commit()
     Attachment.setDrive(app.container.resolveBinding('Adonis/Core/Drive'))
+    Attachment.setConfig(app.config.get('attachment', { variants: {} }))
   })
 
   group.each.teardown(async () => {
@@ -1429,7 +1522,7 @@ test.group('@attachment | paginate', (group) => {
       @column()
       public username: string
 
-      @attachment({ preComputeUrl: true })
+      @attachment({ preComputeUrl: true, variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -1457,8 +1550,12 @@ test.group('@attachment | paginate', (group) => {
     assert.instanceOf(users[0].avatar, Attachment)
     assert.isDefined(users[0].avatar?.url)
     assert.isDefined(body.avatar.url)
+    assert.isDefined(body.avatar.variants.thumbnail.url)
+    assert.isDefined(body.avatar.variants.medium.url)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.medium.name))
   })
 
   test('Attachment response should be null when column value is null', async ({ assert }) => {
@@ -1472,7 +1569,7 @@ test.group('@attachment | paginate', (group) => {
       @column()
       public username: string
 
-      @attachment({ preComputeUrl: true })
+      @attachment({ preComputeUrl: true, variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -1509,7 +1606,7 @@ test.group('@attachment | paginate', (group) => {
       @column()
       public username: string
 
-      @attachment()
+      @attachment({ variants: ['thumbnail', 'medium'] })
       public avatar: AttachmentContract | null
     }
 
@@ -1537,7 +1634,11 @@ test.group('@attachment | paginate', (group) => {
     assert.instanceOf(users[0].avatar, Attachment)
     assert.isUndefined(users[0].avatar?.url)
     assert.isUndefined(body.avatar.url)
+    assert.isUndefined(body.avatar.variants.thumbnail.url)
+    assert.isUndefined(body.avatar.variants.medium.url)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.thumbnail.name))
+    assert.isTrue(await Drive.exists(body.avatar.variants.medium.name))
   })
 })

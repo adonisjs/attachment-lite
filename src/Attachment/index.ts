@@ -18,7 +18,10 @@ import type {
   AttachmentContract,
   AttachmentAttributes,
   AttachmentConstructorContract,
+  AttachmentConfig,
+  VariantAttributes,
 } from '@ioc:Adonis/Addons/AttachmentLite'
+import { Variant } from './variant'
 
 const REQUIRED_ATTRIBUTES = ['name', 'size', 'extname', 'mimeType']
 
@@ -28,6 +31,21 @@ const REQUIRED_ATTRIBUTES = ['name', 'size', 'extname', 'mimeType']
  */
 export class Attachment implements AttachmentContract {
   private static drive: DriveManagerContract
+  private static config: AttachmentConfig = { variants: {} }
+
+  /**
+   * Refrence to the config
+   */
+  public static getConfig() {
+    return this.config
+  }
+
+  /**
+   * Set the config instance
+   */
+  public static setConfig(config: AttachmentConfig) {
+    this.config = config
+  }
 
   /**
    * Refrence to the drive
@@ -52,6 +70,7 @@ export class Attachment implements AttachmentContract {
       extname: file.extname!,
       mimeType: `${file.type}/${file.subtype}`,
       size: file.size!,
+      variants: {},
     }
 
     return new Attachment(attributes, file)
@@ -79,6 +98,11 @@ export class Attachment implements AttachmentContract {
     })
 
     const attachment = new Attachment(attributes)
+
+    /**
+     * Variants should be empty object incase it is not available
+     */
+    if (!attachment.variants) attachment.variants = {}
 
     /**
      * Files fetched from DB are always persisted
@@ -134,9 +158,23 @@ export class Attachment implements AttachmentContract {
    */
   public isDeleted: boolean
 
+  /**
+   * Find variants which should be regenerated
+   */
+  public shouldBeRegenerateFor?: string | Array<string>
+
+  /**
+   * Stores variants of the current file
+   */
+  public variants: { [name: string]: VariantAttributes & { url?: string } }
+
   constructor(private attributes: AttachmentAttributes, private file?: MultipartFileContract) {
     if (this.attributes.name) {
       this.name = this.attributes.name
+    }
+
+    if (this.attributes.variants) {
+      this.variants = this.attributes.variants
     }
   }
 
@@ -174,6 +212,11 @@ export class Attachment implements AttachmentContract {
    * Save file to the disk. Results if noop when "this.isLocal = false"
    */
   public async save() {
+    if (this.shouldBeRegenerateFor) {
+      await this.createVariants(this.name)
+      await this.computeUrl()
+    }
+
     /**
      * Do not persist already persisted file or if the
      * instance is not local
@@ -186,6 +229,11 @@ export class Attachment implements AttachmentContract {
      * Write to the disk
      */
     await this.file!.moveToDisk('./', { name: this.generateName() }, this.options?.disk)
+
+    /**
+     * Generate file variants
+     */
+    await this.createVariants(this.file!.filePath!)
 
     /**
      * Assign name to the file
@@ -212,8 +260,121 @@ export class Attachment implements AttachmentContract {
     }
 
     await this.getDisk().delete(this.name)
+
+    /**
+     * Delete all file variants
+     */
+    if (this.variants) {
+      await Promise.all(
+        Object.keys(this.variants).map((k) => this.getDisk().delete(this.variants[k].name))
+      )
+    }
+
     this.isDeleted = true
     this.isPersisted = false
+  }
+
+  private getVariantsConfig() {
+    /**
+     * Get Attachment configuration
+     */
+    let { variants } = Attachment.getConfig()
+
+    /**
+     * Store variants combined from Attachment config and @attachment() decorator.
+     */
+    let versions: AttachmentConfig['variants'] = {}
+
+    /**
+     * Return if no variants are specified.
+     */
+    if (!variants || !this.options?.variants) return false
+
+    /**
+     * Extract variants from @attachment() decorator
+     * and map config for each variant.
+     */
+    if (this.options?.variants && Array.isArray(this.options.variants)) {
+      this.options?.variants.forEach((v) => {
+        versions[v] = variants[v]
+      })
+    }
+
+    /**
+     * Update versions incase we don't have options specified in @attachment() decorator
+     */
+    if (Object.keys(versions).length === 0) {
+      versions = variants
+    }
+
+    /**
+     * Add all variant names who should be regenerated.
+     */
+    if (this.shouldBeRegenerateFor && this.shouldBeRegenerateFor !== 'all') {
+      const data = {}
+
+      if (typeof this.shouldBeRegenerateFor === 'string') {
+        this.shouldBeRegenerateFor = [this.shouldBeRegenerateFor]
+      }
+
+      for (const v of this.shouldBeRegenerateFor) {
+        if (!versions[v]) continue
+
+        data[v] = versions[v]
+      }
+
+      return data
+    }
+
+    /**
+     * Return processed variants
+     */
+    return versions
+  }
+
+  /**
+   * Create file variants
+   */
+  private async createVariants(filePath: string | Buffer) {
+    /**
+     * Get variant configuration
+     */
+    const variantsConfig = this.getVariantsConfig()
+
+    /**
+     * Return noop if there are no variants to generate
+     */
+    if (variantsConfig === false) return
+
+    /**
+     * Generate all specified variants
+     */
+    await Promise.all(
+      Object.keys(variantsConfig).map(async (key) => {
+        const variant = new Variant(filePath)
+        const buffer = await variant.generate({
+          ...variantsConfig[key],
+          folder: this.options?.folder,
+        })
+
+        /**
+         * Delete old variant from disk
+         */
+        if (this.variants[key]) {
+          await this.getDisk().delete(this.variants[key].name)
+        }
+
+        /**
+         * Save variant to disk
+         */
+        await this.getDisk().put(variant.name, buffer!)
+
+        /**
+         * Replace variant details with updated filename and metadata
+         */
+        this.variants[key] = variant.toObject()
+      })
+    )
   }
 
   /**
@@ -241,6 +402,7 @@ export class Attachment implements AttachmentContract {
      */
     if (typeof this.options.preComputeUrl === 'function') {
       this.url = await this.options.preComputeUrl(disk, this)
+
       return
     }
 
@@ -252,6 +414,18 @@ export class Attachment implements AttachmentContract {
       this.url = await disk.getSignedUrl(this.name)
     } else {
       this.url = await disk.getUrl(this.name)
+    }
+
+    /**
+     * Compute urls for all variants
+     */
+    for (const key in this.variants) {
+      const fileVariantVisibility = await disk.getVisibility(this.variants[key].name)
+      if (fileVariantVisibility === 'private') {
+        this.variants[key].url = await disk.getSignedUrl(this.variants[key].name)
+      } else {
+        this.variants[key].url = await disk.getUrl(this.variants[key].name)
+      }
     }
   }
 
@@ -279,6 +453,7 @@ export class Attachment implements AttachmentContract {
       extname: this.extname,
       size: this.size,
       mimeType: this.mimeType,
+      variants: this.variants || {},
     }
   }
 

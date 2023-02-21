@@ -9,3 +9,4 @@
 
 /// <reference path="./attachment.ts" />
 /// <reference path="./container.ts" />
+/// <reference path="./variant.ts" />

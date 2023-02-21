@@ -7,6 +7,7 @@
  * file that was distributed with this source code.
  */
 
+import { AttachmentConfig } from '@ioc:Adonis/Addons/AttachmentLite'
 import { ApplicationContract } from '@ioc:Adonis/Core/Application'
 
 export default class AttachmentLiteProvider {
@@ -26,9 +27,12 @@ export default class AttachmentLiteProvider {
 
   public boot() {
     this.application.container.withBindings(
-      ['Adonis/Addons/AttachmentLite', 'Adonis/Core/Drive'],
-      (AttachmentLite, Drive) => {
+      ['Adonis/Addons/AttachmentLite', 'Adonis/Core/Drive', 'Adonis/Core/Config'],
+      (AttachmentLite, Drive, Config) => {
         AttachmentLite.Attachment.setDrive(Drive)
+        AttachmentLite.Attachment.setConfig(
+          Config.get('attachment', { variants: {} } as AttachmentConfig)
+        )
       }
     )
   }

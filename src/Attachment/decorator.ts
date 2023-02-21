@@ -107,8 +107,9 @@ async function saveWithAttachments() {
    */
   await Promise.all(
     this.constructor['attachments'].map(
-      (attachmentField: { property: string; options?: AttachmentOptions }) =>
-        persistAttachment(this, attachmentField.property, attachmentField.options)
+      (attachmentField: { property: string; options?: AttachmentOptions }) => {
+        return persistAttachment(this, attachmentField.property, attachmentField.options)
+      }
     )
   )
 
@@ -198,7 +199,7 @@ export const attachment: AttachmentDecorator = (options) => {
     /**
      * Separate attachment options from the column options
      */
-    const { disk, folder, preComputeUrl, ...columnOptions } = options || {}
+    const { disk, folder, preComputeUrl, variants, ...columnOptions } = options || {}
 
     /**
      * Define attachments array on the model constructor
@@ -209,7 +210,7 @@ export const attachment: AttachmentDecorator = (options) => {
      * Push current column (one using the @attachment decorator) to
      * the attachments array
      */
-    Model['attachments'].push({ property, options: { disk, folder, preComputeUrl } })
+    Model['attachments'].push({ property, options: { disk, folder, preComputeUrl, variants } })
 
     /**
      * Define the property as a column too
