@@ -11,7 +11,7 @@ import 'reflect-metadata'
 
 import { test } from '@japa/runner'
 import { join } from 'path'
-import supertest from 'supertest'
+import * as supertest from 'supertest'
 import { createServer } from 'http'
 import { ApplicationContract } from '@ioc:Adonis/Core/Application'
 import { AttachmentContract } from '@ioc:Adonis/Addons/AttachmentLite'
