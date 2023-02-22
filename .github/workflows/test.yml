@@ -17,6 +17,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
+          cache-dependency-path: package.json
       - name: Install
         run: npm install
       - name: Run tests
@@ -35,6 +36,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
+          cache-dependency-path: package.json
       - name: Patch node-gyp to support Visual Studio 2019
         shell: powershell
         run: |
