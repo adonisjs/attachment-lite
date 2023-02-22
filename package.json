@@ -31,7 +31,6 @@
     "attachment",
     "attachment-lite"
   ],
-  
   "author": "virk,adonisjs",
   "license": "MIT",
   "devDependencies": {
@@ -60,6 +59,7 @@
     "np": "^7.6.3",
     "prettier": "^2.8.4",
     "reflect-metadata": "^0.1.13",
+    "sharp": "^0.31.3",
     "sqlite3": "^5.1.4",
     "supertest": "^6.3.3",
     "typescript": "^4.9.5"
@@ -91,7 +91,12 @@
   },
   "adonisjs": {
     "templates": {
-      "config": [{ "src": "config.txt", "dest": "attachment" }]
+      "config": [
+        {
+          "src": "config.txt",
+          "dest": "attachment"
+        }
+      ]
     },
     "types": "@adonisjs/attachment-lite",
     "providers": [
