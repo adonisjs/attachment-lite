@@ -159,11 +159,6 @@ export class Attachment implements AttachmentContract {
   public isDeleted: boolean
 
   /**
-   * Find variants which should be regenerated
-   */
-  public shouldBeRegenerateFor?: string | Array<string>
-
-  /**
    * Stores variants of the current file
    */
   public variants: { [name: string]: VariantAttributes & { url?: string } }
@@ -212,11 +207,6 @@ export class Attachment implements AttachmentContract {
    * Save file to the disk. Results if noop when "this.isLocal = false"
    */
   public async save() {
-    if (this.shouldBeRegenerateFor) {
-      await this.createVariants(this.name)
-      await this.computeUrl()
-    }
-
     /**
      * Do not persist already persisted file or if the
      * instance is not local
@@ -226,14 +216,14 @@ export class Attachment implements AttachmentContract {
     }
 
     /**
+     * Generate file variants
+     */
+    await this.createVariants(this.file!.tmpPath!)
+
+    /**
      * Write to the disk
      */
     await this.file!.moveToDisk('./', { name: this.generateName() }, this.options?.disk)
-
-    /**
-     * Generate file variants
-     */
-    await this.createVariants(this.file!.filePath!)
 
     /**
      * Assign name to the file
@@ -305,25 +295,6 @@ export class Attachment implements AttachmentContract {
      */
     if (Object.keys(versions).length === 0) {
       versions = variants
-    }
-
-    /**
-     * Add all variant names who should be regenerated.
-     */
-    if (this.shouldBeRegenerateFor && this.shouldBeRegenerateFor !== 'all') {
-      const data = {}
-
-      if (typeof this.shouldBeRegenerateFor === 'string') {
-        this.shouldBeRegenerateFor = [this.shouldBeRegenerateFor]
-      }
-
-      for (const v of this.shouldBeRegenerateFor) {
-        if (!versions[v]) continue
-
-        data[v] = versions[v]
-      }
-
-      return data
     }
 
     /**
