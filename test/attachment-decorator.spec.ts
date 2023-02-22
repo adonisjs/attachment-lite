@@ -84,7 +84,7 @@ test.group('@attachment | insert', (group) => {
     assert.deepEqual(users[0].avatar?.toJSON(), body.avatar)
 
     assert.isTrue(await Drive.exists(body.avatar.name))
-    assert.isEmpty(users[0].avatar.variants)
+    assert.isEmpty(users[0].avatar?.variants)
   })
 
   test('cleanup attachments when save call fails', async ({ assert }) => {
