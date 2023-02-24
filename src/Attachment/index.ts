@@ -166,7 +166,7 @@ export class Attachment implements AttachmentContract {
    * Define persistance options
    */
   public setOptions(options?: AttachmentOptions) {
-    this.options = options
+    this.options = { ...this.options, ...(options || {}) }
     return this
   }
 

@@ -93,6 +93,11 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
     setOptions(options?: AttachmentOptions): this
 
     /**
+     * Attachment options
+     */
+    options?: AttachmentOptions
+
+    /**
      * Save file to the disk. Results if noop when "this.isLocal = false"
      */
     save(): Promise<void>
