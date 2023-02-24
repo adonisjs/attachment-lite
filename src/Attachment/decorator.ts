@@ -171,7 +171,10 @@ async function afterFind(modelInstance: LucidRow) {
   await Promise.all(
     modelInstance.constructor['attachments'].map(
       (attachmentField: { property: string; options?: AttachmentOptions }) => {
-        if (modelInstance[attachmentField.property]) {
+        if (
+          modelInstance[attachmentField.property] &&
+          modelInstance[attachmentField.property] instanceof Attachment
+        ) {
           modelInstance[attachmentField.property].setOptions(attachmentField.options)
           return modelInstance[attachmentField.property].computeUrl()
         }
