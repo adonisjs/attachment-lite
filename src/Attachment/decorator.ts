@@ -215,10 +215,10 @@ export const attachment: AttachmentDecorator = (options) => {
      * Define the property as a column too
      */
     Model.$addColumn(property, {
-      ...columnOptions,
       consume: (value) => (value ? Attachment.fromDbResponse(value) : null),
       prepare: (value) => (value ? JSON.stringify(value.toObject()) : null),
       serialize: (value) => (value ? value.toJSON() : null),
+      ...columnOptions,
     })
 
     /**
