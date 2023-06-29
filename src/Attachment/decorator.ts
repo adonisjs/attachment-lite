@@ -125,6 +125,7 @@ async function saveWithAttachments() {
     } else {
       await commit(this)
     }
+    return this
   } catch (error) {
     await rollback(this)
     throw error
