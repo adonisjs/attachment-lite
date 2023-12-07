@@ -26,6 +26,7 @@ declare module '@ioc:Adonis/Addons/AttachmentLite' {
     size: number
     extname: string
     mimeType: string
+    disk?: string
   }
 
   /**

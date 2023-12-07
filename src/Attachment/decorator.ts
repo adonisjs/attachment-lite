@@ -173,6 +173,9 @@ async function afterFind(modelInstance: LucidRow) {
     modelInstance.constructor['attachments'].map(
       (attachmentField: { property: string; options?: AttachmentOptions }) => {
         if (modelInstance[attachmentField.property]) {
+          if (modelInstance[attachmentField.property].attributes?.disk) {
+            attachmentField.options.disk = modelInstance[attachmentField.property].attributes?.disk
+          }
           modelInstance[attachmentField.property].setOptions(attachmentField.options)
           return modelInstance[attachmentField.property].computeUrl()
         }

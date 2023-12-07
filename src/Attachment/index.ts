@@ -279,6 +279,7 @@ export class Attachment implements AttachmentContract {
       extname: this.extname,
       size: this.size,
       mimeType: this.mimeType,
+      disk: this.getDisk().name,
     }
   }
 
